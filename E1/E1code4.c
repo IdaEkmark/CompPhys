@@ -46,7 +46,7 @@ void calc_acc(double *a, double *u, double *m, double kappa, int size_of_u)
  * @kappa - Spring constant
  */
 void velocity_verlet(int n_timesteps, int n_particles, double **V, double **Q,
-		     double dt, double *m, double kappa)
+            double dt, double *m, double kappa)
 {
     double q[n_particles];
     double v[n_particles];
@@ -55,8 +55,8 @@ void velocity_verlet(int n_timesteps, int n_particles, double **V, double **Q,
     q[1] = Q[1][0];
     q[2] = Q[2][0];
     v[0] = V[0][0];
-	v[1] = V[1][0];
-	v[2] = V[2][0];
+    v[1] = V[1][0];
+    v[2] = V[2][0];
     calc_acc(a, q, m, kappa, n_particles);
     for (int i = 1; i < n_timesteps + 1; i++) {
         /* v(t+dt/2) */
@@ -87,6 +87,47 @@ void velocity_verlet(int n_timesteps, int n_particles, double **V, double **Q,
     }
 }
 
+/*
+ * constructs time array
+ * @array - array to be filled with time values
+ * @start - start value
+ * @len_t - number of times stamps in array
+ * @dt - time step between two consecutive times
+*/
+void arange(double *array, double start, int len_t, double dt){
+    for(int i = 0; i < len_t; i++){
+	array[i] = start + i*dt;
+    }
+}
+
+/*
+ * writes to file
+ * @fname - File name 
+ * @time_array - array of time values
+ * @Q - n_particles x n_timesteps array with displacement values
+ * @n_timesteps - number of points
+*/
+void write_to_file(char *fname, double *time_array,
+		   double **Q, double **V, int n_timesteps, int n_particles) {
+    FILE *fp = fopen(fname, "w");
+
+    fprintf(fp, "time");
+    for (int j = 0; j < n_particles; ++j) {
+        fprintf(fp, ", Q%i, V%i", j, j);
+    }
+    fprintf(fp, "\n");
+
+    for(int i = 0; i < n_timesteps; ++i){
+	    fprintf(fp, "%f", time_array[i]);
+
+        for(int j = 0; j < n_particles; ++j){
+            fprintf(fp, ", %f, %f", Q[j][i], V[j][i]);
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+}
+
 void calculateEnergy(int n_timesteps, int n_particles, double **V, double **Q,
 	     double dt, double *m, double kappa, double *K, double *P, double *E) 
 {
@@ -111,15 +152,15 @@ void extractColumnVector(double **M, double *V, int index, int Mrows) {
 
 int main()
 {
-	double kn_per_m = 6.24151e1; // 1e3 J/m^2 * (1e-10 m/Å)^2 / (1.602e-19 J/eV) 
-	double tMax = 0.25;
-	int n_t = 250; double dt = tMax / (double) n_t; int n_p = 3; double kappa = kn_per_m * 1;
-	double m[n_p];
+    double kn_per_m = 6.24151e1; // 1e3 J/m^2 * (1e-10 m/Å)^2 / (1.602e-19 J/eV)
+    double tMax = 0.25;
+    int n_t = 250000; double dt = tMax / (double) n_t; int n_p = 3; double kappa = kn_per_m;
+    double m[n_p];
 	for (int i=0; i<n_p; i++) {
 		m[i] = 12.0 / 9649.0;
 	}
-	double **Q; double **V;
-	
+    double **Q; double **V;
+    
 	Q = malloc(n_p * sizeof *Q);
 	for (int i=0; i < n_p; i++){
 		Q[i] = malloc(n_t * sizeof *Q[i]);
@@ -137,6 +178,11 @@ int main()
 	V[2][0] = 0;
 	
 	velocity_verlet(n_t, n_p, V, Q, dt, m, kappa);
+
+    double time_array[n_t];
+    arange(time_array, 0, n_t, dt);
+    write_to_file("fig4.csv", time_array, Q, V, n_t, n_p);
+
 	
 	double q_1[n_t]; double q_2[n_t]; double q_3[n_t];
 	extractColumnVector(Q, q_1, 0, n_t);
