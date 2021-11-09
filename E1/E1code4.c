@@ -1,5 +1,9 @@
 /******************************************************************************
  * E1code4
+ * 
+ * Compile me as:
+ * clang -c fft.c -o fft.o -lgsl -lgslcblas
+ * clang E1code4.c fft.o -o ./Executable_files/<execuutable name> -lgsl -lgslcblas
  ******************************************************************************
  * Routine that runs the velocity verlet algorithm
  * Use as template to construct your program!
