@@ -5,7 +5,7 @@
  * and writes the result to a h_t.csv
  *
  * Compile me as:
- * clang E1code1.c -o <executable name> -lm
+ * clang E1code1.c -o ./Executable_files/<executable name> -lm
  */
 /******************************************************************************
  * Includes

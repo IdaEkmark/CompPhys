@@ -7,7 +7,7 @@
  *
  * Compile me as:
  * clang -c fft.c -o fft.o -lgsl -lgslcblas
- * clang E1code3 fft.o -o <execuutable name> -lgsl -lgslcblas
+ * clang E1code3.c fft.o -o ./Executable_files/<execuutable name> -lgsl -lgslcblas
  */
 
 /************************************************************
