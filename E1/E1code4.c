@@ -101,13 +101,40 @@ void arange(double *array, double start, int len_t, double dt){
 }
 
 /*
- * writes to file
+ * Saves t, E, K and P to a file (Usually .csv).
  * @fname - File name 
  * @time_array - array of time values
  * @Q - n_particles x n_timesteps array with displacement values
- * @n_timesteps - number of points
+ * @V - n_particles x n_timesteps array with velocity values
+ * @n_timesteps - number of timesteps
+ * @n_particles - number of particles
 */
-void write_to_file(char *fname, double *time_array,
+void saveEKPtoFile(char *fname, double *time_array,
+		   double *E, double *K, double *P, int n_timesteps) {
+    FILE *fp = fopen(fname, "w");
+
+    fprintf(fp, "time, E, K, P\n");
+
+    for(int i = 0; i < n_timesteps; ++i){
+	    fprintf(fp, "%f", time_array[i]);
+		fprintf(fp, ", %f", E[i]);
+		fprintf(fp, ", %f", K[i]);
+		fprintf(fp, ", %f", P[i]);
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+}
+
+/*
+ * Saves t, q_i and v_i to a file (Usually .csv).
+ * @fname - File name 
+ * @time_array - array of time values
+ * @Q - n_particles x n_timesteps array with displacement values
+ * @V - n_particles x n_timesteps array with velocity values
+ * @n_timesteps - number of timesteps
+ * @n_particles - number of particles
+*/
+void saveQVtoFile(char *fname, double *time_array,
 		   double **Q, double **V, int n_timesteps, int n_particles) {
     FILE *fp = fopen(fname, "w");
 
@@ -128,19 +155,43 @@ void write_to_file(char *fname, double *time_array,
     fclose(fp);
 }
 
+/*
+ * writes to file
+ * @fname - File name 
+ * @time_array - array of time values
+ * @signal - array with signal values
+ * @n_points - number of points
+*/
+void write_to_file(char *fname, double *frequencies,
+		   double *spectrum, int n_points)
+{
+    FILE *fp = fopen(fname, "w");
+    fprintf(fp, "signal, frequency\n");
+    for(int i = 0; i < n_points; ++i){
+	    fprintf(fp, "%f,%f\n", spectrum[i], frequencies[i]);
+    }
+    fclose(fp);
+}
+
 void calculateEnergy(int n_timesteps, int n_particles, double **V, double **Q,
 	     double dt, double *m, double kappa, double *K, double *P, double *E) 
 {
 	for (int t = 0; t < n_timesteps; t++) { 
 		K[t] = 0;
 		P[t] = 0;
-		E[t] = 0;
+
+		// Handle boundaries
+		P[t] += kappa * Q[0][t] * Q[0][t] / 2.0;
+		P[t] += kappa * Q[n_particles-1][t] * Q[n_particles-1][t] / 2.0;
+
+		// Handle everything else
 		for (int p = 0; p < n_particles; p++) {
-			K[t] += m[p] * V[p][t] * V[p][t] / 2;
-			E[t] += m[p] * V[p][t] * V[p][t] / 2;
-			P[t] += kappa * Q[p][t] * Q[p][t] / 2;
-			E[t] += kappa * Q[p][t] * Q[p][t] / 2;
+			K[t] += m[p] * V[p][t] * V[p][t] / 2.0;
+			if (p < n_particles-1) {
+				P[t] += kappa * ( Q[p+1][t] - Q[p][t] ) * ( Q[p+1][t] - Q[p][t] ) / 2.0;
+			}
 		}
+		E[t] = K[t] + P[t];
 	}
 }
 
@@ -171,40 +222,69 @@ int main()
 	}
 	
 	Q[0][0] = 0.01;
-	Q[1][0] = 0;
-	Q[2][0] = 0;
+	Q[1][0] = 0.005;
+	Q[2][0] = -0.005;
 	V[0][0] = 0;
 	V[1][0] = 0;
 	V[2][0] = 0;
 	
 	velocity_verlet(n_t, n_p, V, Q, dt, m, kappa);
-
-    double time_array[n_t];
+	
+	double *time_array;
+	time_array = malloc(n_t * sizeof (double));
     arange(time_array, 0, n_t, dt);
-    write_to_file("fig4.csv", time_array, Q, V, n_t, n_p);
+    saveQVtoFile("E1u5.csv", time_array, Q, V, n_t, n_p);
 
-	
-	double q_1[n_t]; double q_2[n_t]; double q_3[n_t];
-	extractColumnVector(Q, q_1, 0, n_t);
-	extractColumnVector(Q, q_2, 0, n_t);
-	extractColumnVector(Q, q_3, 0, n_t);
-	
-	double frequencies[n_t];
-	for(int i = 0; i < n_t; i++){
+
+	double *frequencies;
+	frequencies = malloc(n_t * sizeof (double));
+	for (int i = 0; i < n_t; i++) {
 		frequencies[i] = i / (dt * n_t) - 1.0 / (2.0 * dt);
 	}
 
 	/*
 	 * Do the fft
 	 */
-	double fftd_data1[n_t]; double fftd_data2[n_t]; double fftd_data3[n_t];
-	powerspectrum(q_1, fftd_data1, n_t);
-	powerspectrum_shift(fftd_data1, n_t);
-	powerspectrum(q_2, fftd_data2, n_t);
-	powerspectrum_shift(fftd_data2, n_t);
-	powerspectrum(q_3, fftd_data3, n_t);
-	powerspectrum_shift(fftd_data3, n_t);
+	double *fftd_data1; double *fftd_data2; double *fftd_data3;
+	fftd_data1 = malloc(n_t * sizeof (double));
+	fftd_data2 = malloc(n_t * sizeof (double));
+	fftd_data3 = malloc(n_t * sizeof (double));
+
 	
+	powerspectrum(Q[0], fftd_data1, n_t);
+	powerspectrum_shift(fftd_data1, n_t);
+	powerspectrum(Q[1], fftd_data2, n_t);
+	powerspectrum_shift(fftd_data2, n_t);
+	powerspectrum(Q[2], fftd_data3, n_t);
+	powerspectrum_shift(fftd_data3, n_t);
+
+	/*
+     * Dump fft and frequencies to file
+     */
+    write_to_file("E1u5_PS_q1.csv", fftd_data1, frequencies, n_t);
+	write_to_file("E1u5_PS_q2.csv", fftd_data2, frequencies, n_t);
+	write_to_file("E1u5_PS_q3.csv", fftd_data3, frequencies, n_t);
+
+	free(frequencies);
+
+	double *E; double *K; double *P;
+	E = malloc(n_t * sizeof (double));
+	K = malloc(n_t * sizeof (double));
+	P = malloc(n_t * sizeof (double));
+
+	calculateEnergy(n_t, n_p, V, Q, dt, m, kappa, K, P, E);
+	saveEKPtoFile("E1u5_Energies.csv", time_array, E, K, P, n_t);
+	
+	free(E);
+	free(K);
+	free(P);
+
+	free(time_array);
+
+	free(fftd_data1);
+	free(fftd_data2);
+	free(fftd_data3);
+
 	for (int i=0; i < n_p; i++){
 		free(Q[i]);
 	}

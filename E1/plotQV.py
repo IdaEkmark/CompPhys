@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # skip_header skips the first
 # row in data.csv
-filename = "fig4"
+filename = "E1u5"
 array = np.genfromtxt('./' + filename + '.csv', delimiter=',', skip_header=1)
 
 fig, ax = plt.subplots(figsize=(11,7))
