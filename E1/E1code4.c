@@ -182,12 +182,6 @@ int main()
     double time_array[n_t];
     arange(time_array, 0, n_t, dt);
     write_to_file("fig4.csv", time_array, Q, V, n_t, n_p);
-
-	
-	double q_1[n_t]; double q_2[n_t]; double q_3[n_t];
-	extractColumnVector(Q, q_1, 0, n_t);
-	extractColumnVector(Q, q_2, 0, n_t);
-	extractColumnVector(Q, q_3, 0, n_t);
 	
 	double frequencies[n_t];
 	for(int i = 0; i < n_t; i++){
@@ -198,11 +192,11 @@ int main()
 	 * Do the fft
 	 */
 	double fftd_data1[n_t]; double fftd_data2[n_t]; double fftd_data3[n_t];
-	powerspectrum(q_1, fftd_data1, n_t);
+	powerspectrum(Q[0], fftd_data1, n_t);
 	powerspectrum_shift(fftd_data1, n_t);
-	powerspectrum(q_2, fftd_data2, n_t);
+	powerspectrum(Q[1], fftd_data2, n_t);
 	powerspectrum_shift(fftd_data2, n_t);
-	powerspectrum(q_3, fftd_data3, n_t);
+	powerspectrum(Q[2], fftd_data3, n_t);
 	powerspectrum_shift(fftd_data3, n_t);
 	
 	for (int i=0; i < n_p; i++){
