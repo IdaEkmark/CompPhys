@@ -209,7 +209,7 @@ int main()
 {
     double kn_per_m = 6.24151e1; // 1e3 J/m^2 * (1e-10 m/Å)^2 / (1.602e-19 J/eV)
     double tMax = 0.25;
-    int n_t = 250000; double dt = tMax / (double) n_t; int n_p = 3; double kappa = kn_per_m;
+    int n_t = 2.5e4; double dt = tMax / (double) n_t; int n_p = 3; double kappa = kn_per_m;
     double m[n_p];
 	for (int i=0; i<n_p; i++) {
 		m[i] = 12.0 / 9649.0;
@@ -237,7 +237,7 @@ int main()
 	double *time_array;
 	time_array = malloc(n_t * sizeof (double));
     arange(time_array, 0, n_t, dt);
-    saveQVtoFile("E1u5.csv", time_array, Q, V, n_t, n_p);
+    saveQVtoFile("5/E1u5_dt2.5e4.csv", time_array, Q, V, n_t, n_p);
 
 
 	double *frequencies;
@@ -265,9 +265,9 @@ int main()
 	/*
      * Dump fft and frequencies to file
      */
-    write_to_file("E1u5_PS_q1.csv", fftd_data1, frequencies, n_t);
-	write_to_file("E1u5_PS_q2.csv", fftd_data2, frequencies, n_t);
-	write_to_file("E1u5_PS_q3.csv", fftd_data3, frequencies, n_t);
+    write_to_file("5/E1u5_PS_q1_dt2.5e4.csv", fftd_data1, frequencies, n_t);
+	write_to_file("5/E1u5_PS_q2_dt2.5e4.csv", fftd_data2, frequencies, n_t);
+	write_to_file("5/E1u5_PS_q3_dt2.5e4.csv", fftd_data3, frequencies, n_t);
 
 	free(frequencies);
 
@@ -277,7 +277,7 @@ int main()
 	P = malloc(n_t * sizeof (double));
 
 	calculateEnergy(n_t, n_p, V, Q, dt, m, kappa, K, P, E);
-	saveEKPtoFile("E1u5_Energies.csv", time_array, E, K, P, n_t);
+	saveEKPtoFile("5/E1u5_Energies_dt2.5e4.csv", time_array, E, K, P, n_t);
 	
 	free(E);
 	free(K);
