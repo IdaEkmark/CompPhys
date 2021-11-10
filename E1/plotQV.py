@@ -18,7 +18,7 @@ ax.plot(array[:, 0], array[:, 5], label = "$q_3=$C")
 
 ax.set_xlabel('Time (ps)')
 ax.set_ylabel('Displacement (Å)')
-ax.set_title('$dt=2.5e4$')
+ax.set_title('$n_t=2.5e4$')
 ax.legend(loc='best')
 ax.grid()
 

@@ -3,7 +3,7 @@
  * 
  * Compile me as:
  * clang -c fft.c -o fft.o -lgsl -lgslcblas
- * clang E1code5.c fft.o -o ./Executable_files/<execuutable name> -lgsl -lgslcblas
+ * clang E1code5.c fft.o -o ./Executable_files/E1code5 -lgsl -lgslcblas
  ******************************************************************************
  * Routine that runs the velocity verlet algorithm
  * Use as template to construct your program!
@@ -206,7 +206,7 @@ int main()
     double kn_per_m = 6.24151e1; // 1e3 J/m^2 * (1e-10 m/Å)^2 / (1.602e-19 J/eV)
     double tMax = 0.25;
     int n_t = 2.5e4; double dt = tMax / (double) n_t; int n_p = 3; double kappa = 1.6 * kn_per_m;
-    double m[3] = {12.0 / 9649.0, 16.0 / 9649.0, 12.0 / 9649.0};
+    double m[3] = {16.0 / 9649.0, 12.0 / 9649.0, 16.0 / 9649.0};
     double **Q; double **V;
     
 	Q = malloc(n_p * sizeof *Q);
@@ -219,8 +219,8 @@ int main()
 	}
 	
 	Q[0][0] = 0.01;
-	Q[1][0] = 0.005;
-	Q[2][0] = -0.005;
+	Q[1][0] = -0.007;
+	Q[2][0] = 0.005;
 	V[0][0] = 0;
 	V[1][0] = 0;
 	V[2][0] = 0;

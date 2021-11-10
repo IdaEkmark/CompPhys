@@ -16,9 +16,8 @@ ax.plot(array[:, 0], array[:, 1])
 
 ax.set_xlabel('Frequency (ps$^{-1}$)')
 ax.set_ylabel('Signal (arb. unit)')
-ax.set_title('$dt=2.5e4$')
+ax.set_title('$n_t=2.5e4$')
 ax.grid()
 
 ax.set_xlim([-100,100])
-
 fig.savefig('6/' + filename + '.pdf')

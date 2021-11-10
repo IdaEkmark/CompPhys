@@ -18,7 +18,7 @@ ax.plot(array[:, 0], array[:, 3], label = "Potential energy")
 
 ax.set_xlabel('Time (ps)')
 ax.set_ylabel('Energy (eV)')
-ax.set_title('$dt=2.5e4$')
+ax.set_title('$n_t=2.5e4$')
 ax.legend(loc='best')
 ax.grid()
 
