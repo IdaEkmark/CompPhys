@@ -11,22 +11,22 @@ import matplotlib.pyplot as plt
 
 filename = "KPE_0.01"
 array = np.genfromtxt('3/' + filename + '.csv', delimiter=',', skip_header=1)
-modeNums = [1, 2, 3, 4, 5]
+modeNums = range(1,33)
 maxtIndex = 2500
 
-fig, ax = plt.subplots(figsize=(11,7))
 for k in modeNums:
-    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 1 + 3*(k-1)], label = "Kinetic energy, mode " + str(k))
-    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 2 + 3*(k-1)], label = "Potential energy, mode " + str(k))
-    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 3 + 3*(k-1)], label = "Total energy, mode " + str(k))
+    fig, ax = plt.subplots(figsize=(11, 7))
+    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 1 + 3*(k-1)], label = "Kinetic energy")
+    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 2 + 3*(k-1)], label = "Potential energy")
+    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 3 + 3*(k-1)], label = "Total energy")
 
-ax.set_xlabel('Time (ps)')
-ax.set_ylabel('Energy (eV)')
-ax.set_title('$\Delta t = 0.1$, $\Alpha = 0.01$')
-ax.legend(loc='best')
-ax.grid()
+    ax.set_xlabel('Time (ps)')
+    ax.set_ylabel('Energy (eV)')
+    ax.set_title('Mode ' + str(k) + ', $\alpha = 0.01$')
+    ax.legend(loc='best')
+    ax.grid()
 
-fig.savefig('3/' + filename + '_1to5.pdf')
+    fig.savefig('3/' + filename + '_mode' + str(int(k)) + '.pdf')
 '''
 maxtIndex = 2500
 array1 = np.genfromtxt('2/' + filename + '.csv', delimiter=',', skip_header=1)
