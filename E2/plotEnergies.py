@@ -10,23 +10,24 @@ import matplotlib.pyplot as plt
 # row in data.csv
 
 filename = "KPE_0.01"
-array = np.genfromtxt('3/' + filename + '.csv', delimiter=',', skip_header=1)
+folder = 3
+array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 modeNums = [1, 2, 3, 4, 5]
-maxtIndex = 2500
+maxtIndex = -2
 
 fig, ax = plt.subplots(figsize=(11,7))
 for k in modeNums:
-    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 1 + 3*(k-1)], label = "Kinetic energy, mode " + str(k))
-    ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 2 + 3*(k-1)], label = "Potential energy, mode " + str(k))
+    #ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 1 + 3*(k-1)], label = "Kinetic energy, mode " + str(k))
+    #ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 2 + 3*(k-1)], label = "Potential energy, mode " + str(k))
     ax.plot(array[:maxtIndex + 1, 0], array[:maxtIndex + 1, 3 + 3*(k-1)], label = "Total energy, mode " + str(k))
 
 ax.set_xlabel('Time (ps)')
 ax.set_ylabel('Energy (eV)')
-ax.set_title('$\Delta t = 0.1$, $\Alpha = 0.01$')
+ax.set_title('$\Delta t = 0.1$, $\\alpha = 0.01$')
 ax.legend(loc='best')
 ax.grid()
 
-fig.savefig('3/' + filename + '_1to5.pdf')
+fig.savefig(folder + filename + '_1to5.pdf')
 '''
 maxtIndex = 2500
 array1 = np.genfromtxt('2/' + filename + '.csv', delimiter=',', skip_header=1)

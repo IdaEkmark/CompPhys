@@ -31,7 +31,7 @@ void calc_acc(double *a, double *u, int size_of_u, double alpha)
     		+ alpha * ( (u[1] - u[0]) * (u[1] - u[0]) - u[0] * u[0] );
     a[size_of_u - 1] = (u[size_of_u - 2] - 2*u[size_of_u - 1]) 
     		+ alpha * ( u[size_of_u - 1] * u[size_of_u - 1] 
-											 - (u[size_of_u - 1] - u[size_of_u - 2]) * (u[size_of_u - 1] - u[size_of_u - 2]));
+			- (u[size_of_u - 1] - u[size_of_u - 2]) * (u[size_of_u - 1] - u[size_of_u - 2]));
     
     /* Calculating the acceleration of the inner points */
     for (i = 1; i < size_of_u - 1; i++){
@@ -253,8 +253,13 @@ int main()
 	
 	double *time_array;
 	time_array = malloc((n_t + 1) * sizeof (double));
+<<<<<<< HEAD:E2/E2code2.c
 	arange(time_array, 0, n_t, dt);
 	saveqQpPtoFile("3/qQpP_0.01.csv", time_array, q, Q, p, P, n_t, n_p);
+=======
+	arange(time_array, 0, n_t+1, dt);
+	saveqQpPtoFile("3/qQpP_alpha1e-1.csv", time_array, q, Q, p, P, n_t, n_p);
+>>>>>>> 8bdc0d6a14f6ee9df64f23af97506927e0469662:E2/E2code3.c
 	
 	for (int i=0; i < n_t+1; i++){
 		free(q[i]);
@@ -284,7 +289,11 @@ int main()
 	}
 
     calculateEnergy(n_t, N_PARTICLES, Q, P, kinE, potE, totE);
+<<<<<<< HEAD:E2/E2code2.c
     saveKPEtoFile("3/KPE_0.01.csv", time_array, kinE, potE, totE, n_t, N_PARTICLES);
+=======
+    saveKPEtoFile("3/KPE_alpha1e-1.csv", time_array, kinE, potE, totE, n_t, N_PARTICLES);
+>>>>>>> 8bdc0d6a14f6ee9df64f23af97506927e0469662:E2/E2code3.c
 
     free(time_array);
 
