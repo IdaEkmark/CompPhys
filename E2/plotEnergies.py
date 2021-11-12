@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 # skip_header skips the first
 # row in data.csv
+
 filename = "KPE"
 folder = '4'
 array = np.genfromtxt(folder + '/' + filename + '_1e-1.csv', delimiter=',', skip_header=1)
