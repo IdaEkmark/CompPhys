@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # row in data.csv
 
 filename = "KPE_0.01"
-folder = 3
+folder = '3/'
 array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 modeNums = [1, 2, 3, 4, 5]
 maxtIndex = -2

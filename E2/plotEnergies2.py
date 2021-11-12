@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 # row in data.csv
 
 filename = "KPE_0.01"
-array = np.genfromtxt('3/' + filename + '.csv', delimiter=',', skip_header=1)
+folder = '3/'
+array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 modeNums = range(1,33)
 maxtIndex = 2500
 
@@ -23,12 +24,12 @@ for k in modeNums:
 
 ax.set_xlabel('Time (ps)')
 ax.set_ylabel('Energy (eV)')
-ax.set_title('alpha$ = 0.01$')
+ax.set_title('Total energy, $\\alpha = 0.01$')
 #ax.legend(loc='best')
 ax.set_yscale('log')
 ax.grid()
 
-fig.savefig('3/TotalEnergy_alpha0.01.pdf')
+fig.savefig(folder + 'TotalEnergy_alpha0.01.pdf')
 '''
 maxtIndex = 2500
 array1 = np.genfromtxt('2/' + filename + '.csv', delimiter=',', skip_header=1)
