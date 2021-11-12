@@ -35,7 +35,9 @@ void calc_acc(double *a, double *u, int size_of_u, double alpha)
     
     /* Calculating the acceleration of the inner points */
     for (i = 1; i < size_of_u - 1; i++){
-        a[i] = (u[i - 1] - 2*u[i] + u[i + 1]);
+        a[i] = (u[i - 1] - 2*u[i] + u[i + 1]) 
+        		+ alpha * ( (u[i+1] - u[i] * (u[i+1] - u[i]) 
+        				- (u[i] - u[i-1]) * (u[i] - u[i-1]) );
     }
 }
 
