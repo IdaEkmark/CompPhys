@@ -147,9 +147,54 @@ void arange(double *array, double start, int len_t, double dt){
     }
 }
 
+
+void calculateEnergy(int n_timesteps, int n_particles, double **Q, double **P,
+        double **kinE, double **potE, double **totE) 
+{
+    double wSq;
+	for (int t = 0; t < n_timesteps + 1; t++) { 
+		for (int p = 0; p < n_particles; p++) {
+            wSq = 4 * sin( (p+1)*PI /  ((double) 2*(n_particles + 1)) )*sin( (p+1)*PI / ((double) 2*(n_particles + 1)) );
+			kinE[t][p] = 0.5 * P[t][p]*P[t][p];
+            potE[t][p] = 0.5 * wSq * Q[t][p]*Q[t][p];
+            totE[t][p] = kinE[t][p] + potE[t][p];
+		}
+	}
+}
+
+/*
+ * Saves t, kinE, potE and totE to a file (Usually .csv).
+ * @fname - File name 
+ * @time_array - array of time values
+ * @Q - n_particles x n_timesteps array with displacement values
+ * @V - n_particles x n_timesteps array with velocity values
+ * @n_timesteps - number of timesteps
+ * @n_particles - number of particles
+*/
+void saveKPEtoFile(char *fname, double *time_array,
+		   double **kinE, double **potE, double **totE, int n_timesteps, int n_particles) {
+    FILE *fp = fopen(fname, "w");
+
+    fprintf(fp, "time");
+    for (int j = 1; j < n_particles + 1; ++j) {
+        fprintf(fp, ", kinE%i, potE%i, totE%i", j, j, j);
+    }
+    fprintf(fp, "\n");
+
+    for(int i = 0; i < n_timesteps + 1; ++i){
+	    fprintf(fp, "%f", time_array[i]);
+
+        for(int j = 0; j < n_particles; ++j){
+            fprintf(fp, ", %f, %f, %f", kinE[i][j], potE[i][j], totE[i][j]);
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+}
+
 int main()
 {
-	double dt = 0.1; double t_max = 25000; int n_t = 250000; int n_p = N_PARTICLES;
+	double t_max = 25000.0; int n_t = 250000; double dt = t_max / (double) n_t; int n_p = N_PARTICLES;
 	double trans_matrix[n_p][n_p];
     double **q;
     double **Q;
@@ -211,13 +256,50 @@ int main()
 	}
 	free(q);
 	for (int i=0; i < n_t+1; i++){
-		free(Q[i]);
-	}
-	free(Q);
-	for (int i=0; i < n_t+1; i++){
 		free(p[i]);
 	}
 	free(p);
+    
+    // Energies per mode at each timestep
+    double **kinE;
+    double **potE;
+    double **totE;
+
+    kinE = malloc((n_t + 1) * sizeof *kinE);
+	for (int i=0; i < n_t + 1; i++){
+		kinE[i] = malloc(n_p * sizeof *kinE[i]);
+	}
+	potE = malloc((n_t + 1) * sizeof *potE);
+	for (int i=0; i < n_t + 1; i++){
+		potE[i] = malloc(n_p * sizeof *potE[i]);
+	}
+	totE = malloc((n_t + 1) * sizeof *totE);
+	for (int i=0; i < n_t + 1; i++){
+		totE[i] = malloc(n_p * sizeof *totE[i]);
+	}
+
+    calculateEnergy(n_t, N_PARTICLES, Q, P, kinE, potE, totE);
+    saveKPEtoFile("2/KPE.csv", time_array, kinE, potE, totE, n_t, N_PARTICLES);
+
+    free(time_array);
+
+    for (int i=0; i < n_t+1; i++){
+		free(kinE[i]);
+	}
+	free(kinE);
+	for (int i=0; i < n_t+1; i++){
+		free(potE[i]);
+	}
+	free(potE);
+    for (int i=0; i < n_t+1; i++){
+		free(totE[i]);
+	}
+	free(totE);
+
+    for (int i=0; i < n_t+1; i++){
+		free(Q[i]);
+	}
+	free(Q);
 	for (int i=0; i < n_t+1; i++){
 		free(P[i]);
 	}
