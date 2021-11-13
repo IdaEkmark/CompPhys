@@ -28,16 +28,14 @@ void calc_acc(double *a, double *u, int size_of_u, double alpha)
     
     /* Calculating the acceleration on the boundaries */
     a[0] = (- 2*u[0] + u[1]) 
-    		+ alpha * ( (u[1] - u[0]) * (u[1] - u[0]) - u[0] * u[0] );
+    		+ alpha * ( u[1]*u[1] - 2*u[1]*u[0] );
     a[size_of_u - 1] = (u[size_of_u - 2] - 2*u[size_of_u - 1]) 
-    		+ alpha * ( u[size_of_u - 1] * u[size_of_u - 1] 
-			- (u[size_of_u - 1] - u[size_of_u - 2]) * (u[size_of_u - 1] - u[size_of_u - 2]));
+    		+ alpha * ( 2*u[size_of_u - 1]*u[size_of_u - 2] - u[size_of_u - 2]*u[size_of_u - 2] );
     
     /* Calculating the acceleration of the inner points */
     for (i = 1; i < size_of_u - 1; i++){
         a[i] = (u[i - 1] - 2*u[i] + u[i + 1]) 
-        		+ alpha * ( (u[i+1] - u[i]) * (u[i+1] - u[i]) 
-        				- (u[i] - u[i-1]) * (u[i] - u[i-1]) );
+        		+ alpha * ( u[i+1]*u[i+1] - u[i-1]*u[i-1] + 2*u[i-1]*u[i] - 2*u[i]*u[i+1] );
     }
 }
 
@@ -136,10 +134,10 @@ void saveqQpPtoFile(char *fname, double *time_array,
     fprintf(fp, "\n");
 
     for(int i = 0; i < n_timesteps; ++i){
-	    fprintf(fp, "%f", time_array[i]);
+	    fprintf(fp, "%e", time_array[i]);
 
         for(int j = 0; j < n_particles; ++j){
-            fprintf(fp, ", %f, %f, %f, %f", q[i][j], Q[i][j], p[i][j], P[i][j]);
+            fprintf(fp, ", %e, %e, %e, %e", q[i][j], Q[i][j], p[i][j], P[i][j]);
         }
         fprintf(fp, "\n");
     }
@@ -187,10 +185,10 @@ void saveKPEtoFile(char *fname, double *time_array,
     fprintf(fp, "\n");
 
     for(int i = 0; i < n_timesteps + 1; ++i){
-	    fprintf(fp, "%f", time_array[i]);
+	    fprintf(fp, "%e", time_array[i]);
 
         for(int j = 0; j < n_particles; ++j){
-            fprintf(fp, ", %f, %f, %f", kinE[i][j], potE[i][j], totE[i][j]);
+            fprintf(fp, ", %e, %e, %e", kinE[i][j], potE[i][j], totE[i][j]);
         }
         fprintf(fp, "\n");
     }
@@ -246,7 +244,7 @@ int main()
 	
 	velocity_verlet(n_t, n_p, p, q, dt, alpha);
 	
-	for (int t = 1; t < n_t; t++){
+	for (int t = 1; t < n_t + 1; t++){
 		transform_to_normal_modes(trans_matrix, n_p, q[t], Q[t]);
 		transform_to_normal_modes(trans_matrix, n_p, p[t], P[t]);
 	}
