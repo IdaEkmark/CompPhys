@@ -5,8 +5,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-np.set_printoptions(threshold=sys.maxsize)
+
 # skip_header skips the first
 # row in data.csv
 
@@ -16,25 +15,23 @@ array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 modeNums = range(1,33)
 maxtIndex = -2
 
-fig, ax = plt.subplots(figsize=(11, 7))
-sum = 0
+dt = 100.0
+avgEs = np.zeros((10001,32))
+avgEs[0,:] = array[0,3::3]
+for ti,t in enumerate(array[1:,0]):
+    avgEs[ti+1,:] = np.mean(array[:ti+2,3::3], axis=0)
+
+fig, ax = plt.subplots(figsize=(13,9))
 for k in modeNums:
-    #ax.plot(array[:, 0], array[:, 1 + 3*(k-1)], label = "Kinetic energy")
-    #ax.plot(array[:, 0], array[:, 2 + 3*(k-1)], label = "Potential energy")
-    ax.plot(array[:, 0].flatten(), array[:, 3 + 3*(k-1)].flatten())#, label = "Total energy, mode " + str(k))
-    sum += array[:, 3 + 3 * (k - 1)]
-    #print('Mode ' + str(k))
-    #print('Array:\n' + str(array[:, 3 + 3*(k-1)]))
-    #print('Sum:\n' + str(sum) + '\n\n')
-ax.plot(array[:, 0].flatten(), sum.flatten())#, label = "Total energy, mode " + str(k))
+    ax.loglog(array[:maxtIndex + 1, 0], avgEs[:maxtIndex + 1, k-1], label = "Total energy, mode " + str(k))
+
 ax.set_xlabel('Time (ps)')
 ax.set_ylabel('Energy (eV)')
-ax.set_title('Total energy, $\\alpha = 0.01$')
-#ax.legend(loc='best')
-ax.set_yscale('log')
+ax.set_title('$\Delta t = 0.1$, $\\alpha = 0.01$')
+ax.legend(loc='best')
 ax.grid()
-plt.show()
-fig.savefig(folder + 'TotalEnergy_alpha0.01.pdf')
+
+fig.savefig(folder + filename + '_equip.pdf')
 '''
 maxtIndex = 2500
 array1 = np.genfromtxt('2/' + filename + '.csv', delimiter=',', skip_header=1)
