@@ -10,6 +10,7 @@
 #include <time.h>
 #include "H1lattice.h"
 #include "H1potential.h"
+#include <gsl/gsl_rng.h>
 
 void arange(double *array, double start, int len_t, double dt){
     for(int i = 0; i < len_t; i++){
@@ -131,11 +132,59 @@ int main()
      Code for generating a uniform random number between 0 and 1. srand should only
      be called once.
     */
-    
+    /*
     srand(time(NULL));
     double random_value;
     random_value = (double) rand() / (double) RAND_MAX;
-    
+    */
+	double a0 = 4.03; int N = 4; int n_t = 1000; int natoms = 256; double ***positions; double ***momenta;
+	int t; int i; int j;
+	
+	positions = malloc((n_t + 1) * sizeof **positions);
+	for (t = 0; t < n_t + 1; t++){
+		positions[t] = malloc(natoms * sizeof **positions[t]);
+		for (i = 0; i < natoms; i++) {
+			positions[t][i] = malloc(3 * sizeof *positions[t][i]);
+		}
+	}
+	momenta = malloc((n_t + 1) * sizeof **momenta);
+	for (t = 0; t < n_t + 1; t++){
+		momenta[t] = malloc(natoms * sizeof **momenta[t]);
+		for (i = 0; i < natoms; i++) {
+			momenta[t][i] = malloc(3 * sizeof *momenta[t][i]);
+		}
+	}
+	
+	init_fcc(positions[0], N, a0);
+	
+	gsl_rng * r = gsl_rng_alloc (gsl_rng_mt19937);
+	double randomUni; 
+	for (i = 0; i < natoms; i++) {
+		for (j = 0; j < 3; j++) {
+			positions[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
+		}
+	}
+	for (i = 0; i < natoms; i++) {
+		for (j = 0; j < 3; j++) {
+			momenta[0][i][j] = 0;
+		}
+	}
+	 
+	
+	for (t = 0; t < n_t + 1; t ++){
+		for (i=0; i < n_t+1; i++){
+			free(positions[t][i]);
+		}
+		free(positions[t]);
+	}
+	free(positions);
+	for (t = 0; t < n_t + 1; t ++){
+		for (i=0; i < n_t+1; i++){
+			free(momenta[t][i]);
+		}
+		free(momenta[t]);
+	}
+	free(momenta);
     
     /*
      Descriptions of the different functions in the files H1lattice.c and
