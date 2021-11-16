@@ -47,8 +47,8 @@ void saveEpotsToFile(char *fname, double *yvals, double *tvals, int n_points)
  * @m - vector with masses of atoms sizeof(n_particles)
  * @kappa - Spring constant
  */
-void velocity_verlet(int n_timesteps, int n_particles, int n_cells, double pos[][N_ATOMS][3], double mom[][N_ATOMS][3],
-		double dt, double alpha, double mass)
+void velocity_verlet(int n_timesteps, int n_particles, double a0, double (*pos)[N_ATOMS][3], double (*mom)[N_ATOMS][3],
+		double dt, double mass)
 {
     double q[n_particles][3];
     double p[n_particles][3];
@@ -56,6 +56,7 @@ void velocity_verlet(int n_timesteps, int n_particles, int n_cells, double pos[]
 
     int i;
     int j;
+
     
     for (i=0; i< n_particles; i++) {
         for (j=0; j<3; j++) {
@@ -63,34 +64,34 @@ void velocity_verlet(int n_timesteps, int n_particles, int n_cells, double pos[]
             p[i][j] = mom[0][i][j];
         }
     }
-    get_forces_AL(f,q,n_cells,n_particles);
+    get_forces_AL(f,q,a0,n_particles);
     
     for (int t = 1; t < n_timesteps + 1; t++) {
-        /* v(t+dt/2) */
+        // v(t+dt/2)
         for (i = 0; i < n_particles; i++) {
             for (j=0; j<3; j++) {
                 p[i][j] += dt * 0.5 * f[i][j];
             }
         }
         
-        /* q(t+dt) */
+        // q(t+dt)
         for (i = 0; i < n_particles; i++) {
             for (j=0; j<3; j++) {
                 q[i][j] += dt * p[i][j]/mass;
             }
         }
         
-        /* a(t+dt) */
-        get_forces_AL(f,q,n_cells,n_particles);
+        // a(t+dt)
+        get_forces_AL(f,q,a0,n_particles);
         
-        /* v(t+dt) */
+        // v(t+dt)
         for (i = 0; i < n_particles; i++) {
             for (j=0; j<3; j++) {
                 p[i][j] += dt * 0.5 * f[i][j];
             }
         }
 		
-        /* Save the displacement of the three atoms */
+        // Save the displacement of the three atoms
         for (i = 0; i<n_particles; i++) {
             for (j = 0; j<3; j++) {
                 pos[t][i][j] = q[i][j];
@@ -131,9 +132,12 @@ int main()
      * Task 2
      */
     
-	double a0 = 4.03; int N = 4; int n_t = 1000; int natoms = N_ATOMS; 
-	double positions[n_t+1][natoms][3]; double momenta[n_t+1][natoms][3];
+	double a0 = 4.03; int N = 4; int n_t = 1000; double dt = 1e-3; int natoms = N_ATOMS; double mass = 27.0 / 9649.0;
+	double (*positions)[natoms][3]; double (*momenta)[natoms][3];
 	int i; int j;
+
+    positions = malloc((n_t+1) * sizeof *positions);
+    momenta = malloc((n_t+1) * sizeof *momenta);
 		
 	init_fcc(positions[0], N, a0);
 	
@@ -141,18 +145,14 @@ int main()
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
 			positions[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
-		}
-	}
-	for (i = 0; i < natoms; i++) {
-		for (j = 0; j < 3; j++) {
-			momenta[0][i][j] = 0;
+            momenta[0][i][j] = 0.0;
 		}
 	}
 	
-	velocity_verlet(n_t, int n_particles, int n_cells, double pos[][N_ATOMS][3], double mom[][N_ATOMS][3],
-			double dt, double alpha, double mass)
+	velocity_verlet(n_t, natoms, a0, positions, momenta, dt, mass);
 	
-    
+    free(positions);
+    free(momenta);
     /*
      Descriptions of the different functions in the files H1lattice.c and
      H1potential.c are listed below.
