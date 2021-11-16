@@ -4,7 +4,7 @@
  * E2code.c
  * 
  * Compile me as:
- * clang E2code.c -o ./Executable_files/<executable name> -lm
+ * clang E2code4.c -o ./Executable_files/<executable name> -lm
  */
 
 #include <stdio.h>
