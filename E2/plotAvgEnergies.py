@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # skip_header skips the first
 # row in data.csv
 
-filename = "KPE_0.01"
+filename = "KPE_0.1"
 folder = '4/'
 array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 modeNums = range(1,33)
@@ -27,8 +27,8 @@ for k in modeNums:
 
 ax.set_xlabel('Time (ps)')
 ax.set_ylabel('Energy (eV)')
-ax.set_title('$\Delta t = 0.1$, $\\alpha = 0.01$')
-ax.legend(loc='best')
+ax.set_title('$\Delta t = 0.1$, $\\alpha = 0.1$')
+ax.legend(loc='best', prop={'size': 8})
 ax.grid()
 
 fig.savefig(folder + filename + '_equip.pdf')

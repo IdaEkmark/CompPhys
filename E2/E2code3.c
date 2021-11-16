@@ -4,7 +4,7 @@
  * E2code.c
  * 
  * Compile me as:
- * clang E2code.c -o ./Executable_files/<executable name> -lm
+ * clang E2code3.c -o ./Executable_files/<executable name> -lm
  */
 
 #include <stdio.h>
@@ -198,7 +198,7 @@ void saveKPEtoFile(char *fname, double *time_array,
 int main()
 {
 	double t_max = 25000.0; int n_t = 250000; double dt = t_max / (double) n_t;
-	int n_p = N_PARTICLES; double alpha = 0.1;
+	int n_p = N_PARTICLES; double alpha = 0.01;
 	double trans_matrix[n_p][n_p];
     double **q;
     double **Q;
@@ -253,7 +253,7 @@ int main()
 	double *time_array;
 	time_array = malloc((n_t + 1) * sizeof (double));
 	arange(time_array, 0, n_t+1, dt);
-	saveqQpPtoFile("3/qQpP_0.1.csv", time_array, q, Q, p, P, n_t, n_p);
+	saveqQpPtoFile("3/qQpP_0.01.csv", time_array, q, Q, p, P, n_t, n_p);
 	
 	for (int i=0; i < n_t+1; i++){
 		free(q[i]);
@@ -283,7 +283,7 @@ int main()
 	}
 
     calculateEnergy(n_t, N_PARTICLES, Q, P, kinE, potE, totE);
-    saveKPEtoFile("3/KPE_0.1.csv", time_array, kinE, potE, totE, n_t, N_PARTICLES);
+    saveKPEtoFile("3/KPE_0.01.csv", time_array, kinE, potE, totE, n_t, N_PARTICLES);
 
     free(time_array);
 
