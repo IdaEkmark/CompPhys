@@ -34,45 +34,108 @@ void saveEpotsToFile(char *fname, double *yvals, double *tvals, int n_points)
     fclose(fp);
 }
 
+/*
+ * Perform the velocity verlet alogrithm 
+ * @n_timesteps - The number of time steps to be performed
+ * @n_particles - number of particles in the system
+ * @v - array of velocity (Empty allocated array) : sizeof(v) = n_particles
+ * @q_n - position of the n'th atom : sizeof(q_n) = n_timesteps+1
+ * @dt - timestep
+ * @m - vector with masses of atoms sizeof(n_particles)
+ * @kappa - Spring constant
+ */
+void velocity_verlet(int n_timesteps, int n_particles, int n_cells, double ***pos, double ***mom, double dt, double alpha, double mass)
+{
+    double q[n_particles][3];
+    double p[n_particles][3];
+    double f[n_particles][3];
+
+    int i;
+    int j;
+    
+    for (i=0; i< n_particles; i++) {
+        for (j=0; j<3; j++) {
+            q[i][j] = pos[0][i][j];
+            p[i][j] = mom[0][i][j];
+        }
+    }
+    get_forces_AL(f,q,n_cells,n_particles);
+    
+    for (int t = 1; t < n_timesteps + 1; t++) {
+        /* v(t+dt/2) */
+        for (i = 0; i < n_particles; i++) {
+            for (j=0; j<3; j++) {
+                p[i][j] += dt * 0.5 * f[i][j];
+            }
+        }
+        
+        /* q(t+dt) */
+        for (i = 0; i < n_particles; i++) {
+            for (j=0; j<3; j++) {
+                q[i][j] += dt * p[i][j]/mass;
+            }
+        }
+        
+        /* a(t+dt) */
+        get_forces_AL(f,q,n_cells,n_particles);
+        
+        /* v(t+dt) */
+        for (i = 0; i < n_particles; i++) {
+            for (j=0; j<3; j++) {
+                p[i][j] += dt * 0.5 * f[i][j];
+            }
+        }
+		
+        /* Save the displacement of the three atoms */
+        for (i = 0; i<n_particles; i++) {
+            for (j = 0; j<3; j++) {
+                pos[t][i][j] = q[i][j];
+                mom[t][i][j] = p[i][j];
+            }
+        }
+    }
+}
+
 /* Main program */
 int main()
 {
-    double **X; double *a0s; int N = 4; int natoms = 256; int ndim = 3;
-    double *E_pots; double na = 101; double da = 0.02;
+    /*
+     * Task 1
+
+    double *a0s; int N = 4; int natoms = 256; double X[natoms][3];
+    double *E_pots; int na = 1001; double da = 2/((double)na-1);
 
     a0s = malloc(na * sizeof(double));
     arange(a0s, 3.0, na, da);
 
     E_pots = malloc(na * sizeof(double));
 
-    X = malloc(natoms * sizeof *X);
-	for (int i=0; i < natoms; i++){
-		X[i] = malloc(ndim * sizeof *X[i]);
-	}
-
     for (int i=0; i < na; i++) {
         init_fcc(X, N, a0s[i]);
         E_pots[i] = get_energy_AL(X, N * a0s[i] , natoms);
     }
 
-    saveEpotsToFile("Epots_a0.csv", E_pots, a0s, na);
+    saveEpotsToFile("1/Epots_a0.csv", E_pots, a0s, na);
 
     free(E_pots);
     free(a0s);
+    */
 
-    for (int i=0; i < natoms; i++){
-		free(X[i]);
-	}
-	free(X);
+
+
+    /*
+     * Task 2
+     */
+    
     /*
      Code for generating a uniform random number between 0 and 1. srand should only
      be called once.
     */
-    /*
-     srand(time(NULL));
-     double random_value;
-     random_value = (double) rand() / (double) RAND_MAX;
-    */
+    
+    srand(time(NULL));
+    double random_value;
+    random_value = (double) rand() / (double) RAND_MAX;
+    
     
     /*
      Descriptions of the different functions in the files H1lattice.c and

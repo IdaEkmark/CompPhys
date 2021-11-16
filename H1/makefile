@@ -4,7 +4,7 @@ LIBS = -lm
 
 HEADERS = H1lattice.h H1potential.h
 OBJECTS = H1lattice.o H1potential.o H1main.o
-PROGRAM = MD
+PROGRAM = ./Executable_files/MD
 
 %.o: %.c $(HEADERS)
 	$(CC) -c -o $@ $< $(CFLAGS)
