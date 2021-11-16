@@ -12,6 +12,8 @@
 #include "H1potential.h"
 #include <gsl/gsl_rng.h>
 
+#define N_ATOMS 256
+
 void arange(double *array, double start, int len_t, double dt){
     for(int i = 0; i < len_t; i++){
 	array[i] = start + i*dt;
@@ -45,7 +47,8 @@ void saveEpotsToFile(char *fname, double *yvals, double *tvals, int n_points)
  * @m - vector with masses of atoms sizeof(n_particles)
  * @kappa - Spring constant
  */
-void velocity_verlet(int n_timesteps, int n_particles, int n_cells, double ***pos, double ***mom, double dt, double alpha, double mass)
+void velocity_verlet(int n_timesteps, int n_particles, int n_cells, double pos[][N_ATOMS][3], double mom[][N_ATOMS][3],
+		double dt, double alpha, double mass)
 {
     double q[n_particles][3];
     double p[n_particles][3];
@@ -103,7 +106,7 @@ int main()
     /*
      * Task 1
 
-    double *a0s; int N = 4; int natoms = 256; double X[natoms][3];
+    double *a0s; int N = 4; int natoms = N_ATOMS; double X[natoms][3];
     double *E_pots; int na = 1001; double da = 2/((double)na-1);
 
     a0s = malloc(na * sizeof(double));
@@ -128,37 +131,13 @@ int main()
      * Task 2
      */
     
-    /*
-     Code for generating a uniform random number between 0 and 1. srand should only
-     be called once.
-    */
-    /*
-    srand(time(NULL));
-    double random_value;
-    random_value = (double) rand() / (double) RAND_MAX;
-    */
-	double a0 = 4.03; int N = 4; int n_t = 1000; int natoms = 256; double ***positions; double ***momenta;
-	int t; int i; int j;
-	
-	positions = malloc((n_t + 1) * sizeof **positions);
-	for (t = 0; t < n_t + 1; t++){
-		positions[t] = malloc(natoms * sizeof **positions[t]);
-		for (i = 0; i < natoms; i++) {
-			positions[t][i] = malloc(3 * sizeof *positions[t][i]);
-		}
-	}
-	momenta = malloc((n_t + 1) * sizeof **momenta);
-	for (t = 0; t < n_t + 1; t++){
-		momenta[t] = malloc(natoms * sizeof **momenta[t]);
-		for (i = 0; i < natoms; i++) {
-			momenta[t][i] = malloc(3 * sizeof *momenta[t][i]);
-		}
-	}
-	
+	double a0 = 4.03; int N = 4; int n_t = 1000; int natoms = N_ATOMS; 
+	double positions[n_t+1][natoms][3]; double momenta[n_t+1][natoms][3];
+	int i; int j;
+		
 	init_fcc(positions[0], N, a0);
 	
-	gsl_rng * r = gsl_rng_alloc (gsl_rng_mt19937);
-	double randomUni; 
+	gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937);
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
 			positions[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
@@ -169,37 +148,14 @@ int main()
 			momenta[0][i][j] = 0;
 		}
 	}
-	 
 	
-	for (t = 0; t < n_t + 1; t ++){
-		for (i=0; i < n_t+1; i++){
-			free(positions[t][i]);
-		}
-		free(positions[t]);
-	}
-	free(positions);
-	for (t = 0; t < n_t + 1; t ++){
-		for (i=0; i < n_t+1; i++){
-			free(momenta[t][i]);
-		}
-		free(momenta[t]);
-	}
-	free(momenta);
+	velocity_verlet(n_t, int n_particles, int n_cells, double pos[][N_ATOMS][3], double mom[][N_ATOMS][3],
+			double dt, double alpha, double mass)
+	
     
     /*
      Descriptions of the different functions in the files H1lattice.c and
      H1potential.c are listed below.
-    */
-    
-    /* 
-     Function that generates a fcc lattice in units of [Å]. Nc is the number of 
-     primitive cells in each direction and a0 is the lattice parameter. The
-     positions of all the atoms are stored in pos which should be a matrix of the
-     size N x 3, where N is the number of atoms. The first, second and third column
-     correspond to the x,y and z coordinate respectively.
-    */
-    /*
-     init_fcc(pos, Nc, a0);
     */
     
     /* 

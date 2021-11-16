@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O3 -Wall
-LIBS = -lm
+LIBS = -lm -lgsl -lgslcblas
 
 HEADERS = H1lattice.h H1potential.h
 OBJECTS = H1lattice.o H1potential.o H1main.o
