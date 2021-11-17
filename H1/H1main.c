@@ -48,14 +48,14 @@ void saveEpotsToFile(char *fname, double *yvals, double *tvals, int n_points)
  * @kappa - Spring constant
  */
 void velocity_verlet(int n_timesteps, int n_particles, double a0, double (*pos)[N_ATOMS][3], double (*mom)[N_ATOMS][3],
-		double dt, double mass)
+		double dt, double mass, int N)
 {
     double q[n_particles][3];
     double p[n_particles][3];
     double f[n_particles][3];
 
-    int i;
-    int j;
+    int i; int j;
+    double mass_inv = 1/mass;
 
     
     for (i=0; i< n_particles; i++) {
@@ -64,7 +64,7 @@ void velocity_verlet(int n_timesteps, int n_particles, double a0, double (*pos)[
             p[i][j] = mom[0][i][j];
         }
     }
-    get_forces_AL(f,q,a0,n_particles);
+    get_forces_AL(f,q,N*a0,n_particles);
     
     for (int t = 1; t < n_timesteps + 1; t++) {
         // v(t+dt/2)
@@ -77,12 +77,12 @@ void velocity_verlet(int n_timesteps, int n_particles, double a0, double (*pos)[
         // q(t+dt)
         for (i = 0; i < n_particles; i++) {
             for (j=0; j<3; j++) {
-                q[i][j] += dt * p[i][j]/mass;
+                q[i][j] += dt * p[i][j]*mass_inv;
             }
         }
         
         // a(t+dt)
-        get_forces_AL(f,q,a0,n_particles);
+        get_forces_AL(f,q,N*a0,n_particles);
         
         // v(t+dt)
         for (i = 0; i < n_particles; i++) {
@@ -101,12 +101,25 @@ void velocity_verlet(int n_timesteps, int n_particles, double a0, double (*pos)[
     }
 }
 
+double get_E_kin(double momenta[][3], double n_particles, double mass) 
+{
+	double E_kin = 0;
+	double mass_inv = 1/mass;
+	
+	for (int p = 0; p < n_particles; p++) {
+		for (int i = 0; i < 3; i++) {
+			E_kin += 0.5 * momenta[p][i] * momenta[p][i] * mass_inv; 
+		}
+	}
+	return E_kin;
+}
+
 /* Main program */
 int main()
 {
     /*
      * Task 1
-
+	
     double *a0s; int N = 4; int natoms = N_ATOMS; double X[natoms][3];
     double *E_pots; int na = 1001; double da = 2/((double)na-1);
 
@@ -132,27 +145,44 @@ int main()
      * Task 2
      */
     
-	double a0 = 4.03; int N = 4; int n_t = 1000; double dt = 1e-3; int natoms = N_ATOMS; double mass = 27.0 / 9649.0;
-	double (*positions)[natoms][3]; double (*momenta)[natoms][3];
-	int i; int j;
+	double a0 = 4.03; int N = 4; int n_t = 1000; double dt = 2e-2; int natoms = N_ATOMS; double mass = 27.0 / 9649.0;
+	double (*positions)[natoms][3]; double (*momenta)[natoms][3]; double standardpositions[natoms][3];
+	double *E_pot; double *E_kin; double *time;
+	int i; int j; int t;
 
     positions = malloc((n_t+1) * sizeof *positions);
     momenta = malloc((n_t+1) * sizeof *momenta);
-		
-	init_fcc(positions[0], N, a0);
+    E_pot = malloc((n_t + 1) * sizeof(double));
+    E_kin = malloc((n_t + 1) * sizeof(double));
+    
+	init_fcc(standardpositions, N, a0);
 	
 	gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937);
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
-			positions[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
+			positions[0][i][j] = standardpositions[i][j] + a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
             momenta[0][i][j] = 0.0;
 		}
 	}
 	
-	velocity_verlet(n_t, natoms, a0, positions, momenta, dt, mass);
+	velocity_verlet(n_t, natoms, a0, positions, momenta, dt, mass, N);
+	
+	for (t = 0; t < n_t + 1; t++) {
+		E_pot[t] = get_energy_AL(positions[t], N*a0, natoms);
+		E_kin[t] = get_E_kin(momenta[t], natoms, mass);
+	}
+	
+	time = malloc((n_t+1) * sizeof(double));
+	arange(time, 0.0, n_t+1, dt);
+	saveEpotsToFile("2/Epot_dt0.02.csv", E_pot, time, n_t);
+	saveEpotsToFile("2/Ekin_dt0.02.csv", E_kin, time, n_t);
+	
 	
     free(positions);
     free(momenta);
+    free(E_pot);
+    free(E_kin);
+
     /*
      Descriptions of the different functions in the files H1lattice.c and
      H1potential.c are listed below.
