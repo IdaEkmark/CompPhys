@@ -229,7 +229,7 @@ double velocity_verlet_equi(int n_timesteps, int n_particles, double a0, double 
     		
     int i; int j;
     double mass_inv = 1/mass; double tau_T_inv = 1/tau_T; double tau_P_inv = 1/tau_P; 
-    double N_K_B_3_inv = 1 / (3 * n_particles * K_B);
+    double N_K_B_3_inv = 1 / (3 * n_particles * K_B); double virial;
     double E_kin; double T_inst; double alpha_T; double P_inst; double alpha_P;
     
     for (i=0; i< n_particles; i++) {
@@ -272,13 +272,14 @@ double velocity_verlet_equi(int n_timesteps, int n_particles, double a0, double 
         T_inst = 2 * E_kin * N_K_B_3_inv;
         alpha_T = 1 + 2 * dt * tau_T_inv * ( T_eq - T_inst ) / T_inst; 
         
-        P_inst = 2 * E_kin;
-        for (i = 0; i < n_particles; i++) {
+        virial = get_virial_AL(q,N*a0,n_particles);
+        P_inst = (2 * E_kin + virial)/(3.0 * (N*a0) * (N*a0) * (N*a0));
+        /*for (i = 0; i < n_particles; i++) {
         	for (j = 0; j < 3; j++) {
         		P_inst +=  q[i][j] * f[i][j];
         	}
         }
-        P_inst *= 1.0/(3.0 * (N*a0) * (N*a0) * (N*a0));
+        P_inst *= 1.0/(3.0 * (N*a0) * (N*a0) * (N*a0));*/
         alpha_P = 1.0 - KAPPA_T * dt * tau_P_inv * ( P_eq - P_inst );
         
         for (i = 0; i < n_particles; i++) {
@@ -380,7 +381,7 @@ int main()
 	int N = 4; int n_t_init = 10000; int n_t = 100000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 10;
 	double (*positions_init)[natoms][3]; double (*momenta_init)[natoms][3];
 	double *temperature_init; double *pressure_init; double *time;
-	double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+	double T_eq = 500 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
 
 	positions_init = malloc((n_t_init+1) * sizeof *positions_init);
@@ -448,7 +449,7 @@ int main()
 	int N = 4; int n_t_init = 10000; int n_t = 100000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 10;
 	double (*positions_init)[natoms][3]; double (*momenta_init)[natoms][3];
 	double *temperature_init; double *pressure_init; double *time;
-	double T_eq_init = 5000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+	double T_eq_init = 900 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
 
 	positions_init = malloc((n_t_init+1) * sizeof *positions_init);

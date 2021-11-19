@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # skip_header skips the first
 # row in data.csv
-dt = 2e-2
+dt = 1e-3
 filename = "E_dt" + str(dt)
 filename_p = "Epot_dt" + str(dt)
 filename_k = "Ekin_dt" + str(dt)

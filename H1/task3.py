@@ -69,10 +69,10 @@ filename_P = "P_dt" + str(dt)
 array_T = np.genfromtxt(folder + filename_T + '.csv', delimiter=',', skip_header=1)
 array_P = np.genfromtxt(folder + filename_P + '.csv', delimiter=',', skip_header=1)
 
-t_T = array_T[:, 0]
-T_inst   = array_T[:, 1] - 273.15
-t_P = array_P[:, 0]
-P_inst   = array_P[:, 1] / (6.24e-7)
+t_T = array_T[:, 1]
+T_inst   = array_T[:, 0] - 273.15
+t_P = array_P[:, 1]
+P_inst   = array_P[:, 0] / (6.24e-7)
 
 print('T = ' + str(np.mean(T_inst)))
 print('P = ' + str(np.mean(P_inst)))
