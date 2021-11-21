@@ -1014,12 +1014,12 @@ void runTask7() {
 	
 	
 	powerspectrum(VCF, ps, vcf_intervall);
-	//powerspectrum_shift(ps, vcf_intervall);
+	powerspectrum_shift(ps, vcf_intervall);
 	
 	double *frequencies;
 	frequencies = malloc((vcf_intervall) * sizeof(double));
 	for(int i = 0; i < vcf_intervall; i++){
-		frequencies[i] = i / (dt * vcf_intervall);// - 1.0 / (2.0 * dt);
+		frequencies[i] = i / (dt * vcf_intervall) - 1.0 / (2.0 * dt);
 	}
 	
 	saveDataToFile("7/powerspectrum.csv", ps, frequencies, vcf_intervall, 1);
