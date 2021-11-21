@@ -58,10 +58,11 @@ for Q in Q_list:
     ax3.grid()
 
     plt.suptitle('Position, $dt=$' + str(dt) + ', particle ' + str(i))
-    plt.show()
+    #plt.show()
     figurefilename = 'Position_particle_' + str(int(i))
     fig.savefig(folder + figurefilename + '.pdf')
     i = i + 85
+    plt.close()
 
 filename_T = "T_dt" + str(dt)
 filename_P = "P_dt" + str(dt)
@@ -69,10 +70,22 @@ filename_P = "P_dt" + str(dt)
 array_T = np.genfromtxt(folder + filename_T + '.csv', delimiter=',', skip_header=1)
 array_P = np.genfromtxt(folder + filename_P + '.csv', delimiter=',', skip_header=1)
 
-t_T = array_T[:, 1]
-T_inst   = array_T[:, 0] - 273.15
-t_P = array_P[:, 1]
-P_inst   = array_P[:, 0] / (6.24e-7)
+t_T = array_T[:, 0]
+T_inst = array_T[:, 1] - 273.15
+t_P = array_P[:, 0]
+P_inst = array_P[:, 1] / (6.24e-7) * 1e-4
 
-print('T = ' + str(np.mean(T_inst)))
-print('P = ' + str(np.mean(P_inst)))
+print('T = ' + str(np.mean(T_inst[20000:])))
+print('P = ' + str(np.mean(P_inst[20000:])))
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,4))
+ax1.plot(t_T, T_inst)
+ax1.set_ylabel('$T_{inst}$ [K]')
+ax1.set_xlabel('$t$ (ps)')
+ax1.set_ylim([0,1500])
+ax2.plot(t_P, P_inst)
+ax2.set_xlabel('$t$ (ps)')
+ax2.set_ylabel('$P_{inst}$ [K]')
+ax2.set_ylim([-0.3,0.5])
+fig.savefig(folder + 'InstantaneousTemperaturePressure' + '.pdf')
+plt.close()
