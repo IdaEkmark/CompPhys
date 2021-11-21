@@ -11,10 +11,16 @@
 #include "H1lattice.h"
 #include "H1potential.h"
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_fft_real.h>
+#include <gsl/gsl_fft_complex.h>
+#include <gsl/gsl_complex.h>
+#include <gsl/gsl_complex_math.h>
+#include <complex.h>
 
 #define N_ATOMS 256
 #define K_B 8.6e-5
 #define KAPPA_T 2.10
+#define PI 3.141592653589
 
 void arange(double *array, double start, int len_t, double dt){
     for(int i = 0; i < len_t; i++){
@@ -243,6 +249,16 @@ double evalSquaredDisplacementAtTime(int n_particles, double (*pos)[N_ATOMS][3],
 	return sd_time;
 }
 
+double evalSquaredDisplacementAtTime2(int n_particles, double (*pos)[N_ATOMS][3], int time, int timeprime) {
+	double sd_time = 0;
+	for (int i = 0; i < n_particles; i++) {
+		for (int j = 0; j < 3; j++) {
+			sd_time += (pos[time + timeprime][i][j] - pos[timeprime][i][j]) * (pos[time + timeprime][i][j] - pos[timeprime][i][j]) / n_particles; 
+		}
+	}
+	return sd_time;
+}
+
 void evalMeanSquaredDisplacement(int n_timesteps, int n_particles, double (*pos)[N_ATOMS][3], double *msd, int msd_intervall) {
 	double msd_time;
 	int time = 0;
@@ -255,6 +271,123 @@ void evalMeanSquaredDisplacement(int n_timesteps, int n_particles, double (*pos)
 		time++;
 	}
 	
+}
+
+void evalMeanSquaredDisplacement2(int n_timesteps, int n_particles, double (*pos)[N_ATOMS][3], double *msd, int msd_intervall) {
+	double msd_time;
+	int timeprime = 0; double Nintervall = (double) msd_intervall / (double) n_timesteps;
+	while (timeprime + msd_intervall <= n_timesteps) {
+		msd_time = 0;
+		for (int time = 1; time < msd_intervall; time++ ) {
+			msd_time += evalSquaredDisplacementAtTime(n_particles, pos, time, timeprime)/msd_intervall;
+			msd[time-1] += msd_time / Nintervall;
+		}
+		timeprime += msd_intervall;
+	}
+	
+}
+
+double evalVelocityCorrelationAtTime(int n_particles, double (*mom)[N_ATOMS][3], double mass, int time, int time_sum) {
+	double vc_time = 0;
+	for (int i = 0; i < n_particles; i++) {
+		for (int j = 0; j < 3; j++) {
+			vc_time += mom[time_sum][i][j] * mom[time_sum - time][i][j] / (n_particles * mass * mass); 
+		}
+	}
+	return vc_time;
+}
+
+void evalVelocityCorrelationStandard(int n_timesteps, int n_particles, double (*mom)[N_ATOMS][3], double mass,
+		double *vcf, int vcf_intervall) {
+	double vcf_time;
+	int time = 0;
+	while (time + vcf_intervall < n_timesteps + 1) {
+		vcf_time = 0;
+		for (int time_sum = time + 1; time_sum <= time + vcf_intervall; time_sum++ ) {
+			vcf_time += evalVelocityCorrelationAtTime(n_particles, mom, mass, time, time_sum)/vcf_intervall;
+		}
+		vcf[time] = vcf_time;
+		time++;
+	}
+	
+}
+
+void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)[N_ATOMS][3], double mass,
+		double *vcf, int vcf_intervall) {
+	int t; int i; int l;
+	double velExtended_x[2*vcf_intervall]; 
+	double velExtended_y[2*vcf_intervall];
+	double velExtended_z[2*vcf_intervall];
+	double invFourierVelExtended_x[2*vcf_intervall]; 
+	double invFourierVelExtended_y[2*vcf_intervall];
+	double invFourierVelExtended_z[2*vcf_intervall];
+	double fourier_x[2*vcf_intervall]; 
+	double fourier_y[2*vcf_intervall];
+	double fourier_z[2*vcf_intervall];
+	double normfactor = (double) vcf_intervall/((double)n_timesteps * (double)n_particles) ;
+
+	/*Declare wavetable and workspace for fft*/
+	gsl_fft_complex_wavetable *comp;
+	gsl_fft_complex_workspace *work_c;
+	
+	gsl_fft_real_wavetable *real;
+	gsl_fft_real_workspace *work_r;
+
+	/*Allocate space for wavetable and workspace for fft*/
+	work_c = gsl_fft_complex_workspace_alloc(vcf_intervall);
+	comp = gsl_fft_complex_wavetable_alloc(vcf_intervall);
+		
+	work_r = gsl_fft_real_workspace_alloc(vcf_intervall);
+	real = gsl_fft_real_wavetable_alloc(vcf_intervall);
+	
+	for(l = 0; l < vcf_intervall; l++) {
+		vcf[l] = 0;
+	}
+	int n_t_start;
+	
+	for(i = 0; i < n_particles; i++) {
+		n_t_start = 0;
+		while(n_t_start + vcf_intervall <= n_timesteps) {
+			for(t = 0; t < vcf_intervall; t++) {
+				velExtended_x[t] = mom[t + n_t_start][i][0]/mass;
+				velExtended_y[t] = mom[t + n_t_start][i][1]/mass;
+				velExtended_z[t] = mom[t + n_t_start][i][2]/mass;
+			}
+			for(t = vcf_intervall; t < 2*vcf_intervall; t++) {
+				velExtended_x[t] = 0;
+				velExtended_y[t] = 0;
+				velExtended_z[t] = 0;
+			}
+			
+			/*make copy of data to avoid messing with data in the transform*/
+			for (t = 0; t < 2*vcf_intervall; t++)	{
+				invFourierVelExtended_x[t] = velExtended_x[t];
+				invFourierVelExtended_y[t] = velExtended_y[t];
+				invFourierVelExtended_z[t] = velExtended_z[t];
+			}
+	
+			/*Do the fft*/
+			gsl_fft_complex_inverse(invFourierVelExtended_x, 1, vcf_intervall, comp, work_c);
+			gsl_fft_complex_inverse(invFourierVelExtended_y, 1, vcf_intervall, comp, work_c);
+			gsl_fft_complex_inverse(invFourierVelExtended_z, 1, vcf_intervall, comp, work_c);
+			 
+			for (t = 0; t < 2*vcf_intervall; t++)	{
+				fourier_x[t] = invFourierVelExtended_x[t]*invFourierVelExtended_x[t];//gsl_complex_abs2(invFourierVelExtended_x[t]);
+				fourier_y[t] = invFourierVelExtended_y[t]*invFourierVelExtended_y[t];//gsl_complex_abs2(invFourierVelExtended_y[t]);
+				fourier_z[t] = invFourierVelExtended_z[t]*invFourierVelExtended_z[t];//gsl_complex_abs2(invFourierVelExtended_z[t]);
+			}
+			gsl_fft_real_transform(fourier_x, 1, vcf_intervall, real, work_r);
+			gsl_fft_real_transform(fourier_y, 1, vcf_intervall, real, work_r);
+			gsl_fft_real_transform(fourier_z, 1, vcf_intervall, real, work_r);
+			
+			for(l = 0; l < vcf_intervall; l++) {
+				vcf[l] += (fourier_x[l] + fourier_y[l] + fourier_z[l])*normfactor;
+			}
+			
+			n_t_start += vcf_intervall;
+			
+		}
+	}
 }
 
 void runTask1() {
@@ -546,6 +679,8 @@ void runTask5(char phase) {
 		saveDataToFile("5/MSD_dt0.001_solid.csv", MSD, time,  n_t+1-msd_intervall, 1);
 		
 		free(positions);
+		free(MSD);
+		free(time);
 	}
 	
 	else if (phase == 'l') { // As task 4
@@ -616,9 +751,155 @@ void runTask5(char phase) {
 		printf("D=%.4e\n", MSD[n_t-msd_intervall]/(6*time[n_t-msd_intervall]));
 		
 		free(positions);
+		free(MSD);
+		free(time);
 	}
 	else {
 		printf("Phase should be s for solid or l for liquid");
+	}
+}
+
+void runTask6(char alg) {
+	if (alg == 's') { // As task 4
+		double a0 = 4.03; double mass = 27.0 / 9649.0;
+		int N = 4; int n_t_equi = 10000; int n_t = 100000; double dt = 1e-3; int natoms = N_ATOMS; int nt_skip = 10;
+		double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
+		double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+		int i; int j;
+	
+		positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
+		momenta_equi = malloc((n_t_equi+1) * sizeof *momenta_equi);
+		a0_equi = malloc((n_t_equi) * sizeof(double));
+		
+		init_fcc(positions_equi[0], N, a0);
+		
+		gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937);
+		for (i = 0; i < natoms; i++) {
+			for (j = 0; j < 3; j++) {
+				positions_equi[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
+				momenta_equi[0][i][j] = 0.0;
+			}
+		}
+			
+		velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq, tau_T, tau_P, 
+				positions_equi, momenta_equi, a0_equi);
+		
+		
+		for (i = 0; i < natoms; i++) {
+			for (j = 0; j < 3; j++) {
+				positions_equi[0][i][j] = positions_equi[n_t_equi][i][j];
+				momenta_equi[0][i][j] = momenta_equi[n_t_equi][i][j];
+			}
+		}
+		
+		velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
+				positions_equi, momenta_equi, a0_equi);
+		
+		
+		double (*positions)[natoms][3]; double (*momenta)[natoms][3];
+		
+		positions = malloc((n_t+1) * sizeof *positions);
+		momenta = malloc((n_t+1) * sizeof *momenta);
+				
+		for (i = 0; i < natoms; i++) {
+			for (j = 0; j < 3; j++) {
+				positions[0][i][j] = positions_equi[n_t_equi][i][j];
+				momenta[0][i][j] = momenta_equi[n_t_equi][i][j];
+			}
+		}
+		
+		free(positions_equi);
+		free(momenta_equi);
+		
+		velocity_verlet(n_t, natoms, a0_equi[n_t_equi - 1], positions, momenta, dt, mass, N);
+		
+		free(positions);
+				
+		double *VCF; double *time; int vcf_intervall = 500;
+						
+		VCF = malloc((n_t+1-vcf_intervall) * sizeof(double));
+		
+		evalVelocityCorrelationStandard(n_t, natoms, momenta, mass, VCF, vcf_intervall);
+		time = malloc((n_t+1-vcf_intervall) * sizeof(double));
+		arange(time, 0.0, n_t+1-vcf_intervall, dt);
+		
+		saveDataToFile("6/VCF_dt0.001_standard.csv", VCF, time,  n_t+1-vcf_intervall, nt_skip);
+		
+		free(momenta);
+		free(VCF);
+		free(time);
+	}
+	else if (alg == 'f') { // As task 4
+		double a0 = 4.03; double mass = 27.0 / 9649.0;
+		int N = 4; int n_t_equi = 10000; int n_t = 100000; double dt = 1e-3; int natoms = N_ATOMS; int nt_skip = 10; 
+		double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
+		double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+		int i; int j;
+	
+		positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
+		momenta_equi = malloc((n_t_equi+1) * sizeof *momenta_equi);
+		a0_equi = malloc((n_t_equi) * sizeof(double));
+		
+		init_fcc(positions_equi[0], N, a0);
+		
+		gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937);
+		for (i = 0; i < natoms; i++) {
+			for (j = 0; j < 3; j++) {
+				positions_equi[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
+				momenta_equi[0][i][j] = 0.0;
+			}
+		}
+			
+		velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq, tau_T, tau_P, 
+				positions_equi, momenta_equi, a0_equi);
+		
+		
+		for (i = 0; i < natoms; i++) {
+			for (j = 0; j < 3; j++) {
+				positions_equi[0][i][j] = positions_equi[n_t_equi][i][j];
+				momenta_equi[0][i][j] = momenta_equi[n_t_equi][i][j];
+			}
+		}
+		
+		velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
+				positions_equi, momenta_equi, a0_equi);
+		
+		
+		double (*positions)[natoms][3]; double (*momenta)[natoms][3];
+		
+		positions = malloc((n_t+1) * sizeof *positions);
+		momenta = malloc((n_t+1) * sizeof *momenta);
+				
+		for (i = 0; i < natoms; i++) {
+			for (j = 0; j < 3; j++) {
+				positions[0][i][j] = positions_equi[n_t_equi][i][j];
+				momenta[0][i][j] = momenta_equi[n_t_equi][i][j];
+			}
+		}
+		
+		free(positions_equi);
+		free(momenta_equi);
+		
+		velocity_verlet(n_t, natoms, a0_equi[n_t_equi - 1], positions, momenta, dt, mass, N);
+		
+		free(positions);
+		
+		double *VCF; double *time; int vcf_intervall = 2000;
+								
+		VCF = malloc((vcf_intervall) * sizeof(double));
+		
+		evalVelocityCorrelationFast(n_t, natoms, momenta, mass, VCF, vcf_intervall);
+		time = malloc((vcf_intervall) * sizeof(double));
+		arange(time, 0.0, vcf_intervall, dt);
+		
+		saveDataToFile("6/VCF_dt0.001_fast.csv", VCF, time,  vcf_intervall, nt_skip);
+		
+		free(momenta);
+		free(VCF);
+		free(time);
+	}
+	else {
+		printf("Phase should be s for standard or f for Fast Correlation Algorithm");
 	}
 }
 
@@ -631,8 +912,10 @@ int main()
 	//runTask2(0.02);
 	//runTask3();
 	//runTask4();
-	runTask5('s');
-	runTask5('l');
+	//runTask5('s');
+	//runTask5('l');
+	//runTask6('s');
+	runTask6('f');
 	
 	return 0;   
 }
