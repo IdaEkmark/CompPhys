@@ -13,6 +13,7 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_fft_real.h>
 #include <gsl/gsl_fft_complex.h>
+#include <gsl/gsl_fft_halfcomplex.h>
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
 #include <complex.h>
@@ -249,16 +250,6 @@ double evalSquaredDisplacementAtTime(int n_particles, double (*pos)[N_ATOMS][3],
 	return sd_time;
 }
 
-double evalSquaredDisplacementAtTime2(int n_particles, double (*pos)[N_ATOMS][3], int time, int timeprime) {
-	double sd_time = 0;
-	for (int i = 0; i < n_particles; i++) {
-		for (int j = 0; j < 3; j++) {
-			sd_time += (pos[time + timeprime][i][j] - pos[timeprime][i][j]) * (pos[time + timeprime][i][j] - pos[timeprime][i][j]) / n_particles; 
-		}
-	}
-	return sd_time;
-}
-
 void evalMeanSquaredDisplacement(int n_timesteps, int n_particles, double (*pos)[N_ATOMS][3], double *msd, int msd_intervall) {
 	double msd_time;
 	int time = 0;
@@ -269,20 +260,6 @@ void evalMeanSquaredDisplacement(int n_timesteps, int n_particles, double (*pos)
 		}
 		msd[time] = msd_time;
 		time++;
-	}
-	
-}
-
-void evalMeanSquaredDisplacement2(int n_timesteps, int n_particles, double (*pos)[N_ATOMS][3], double *msd, int msd_intervall) {
-	double msd_time;
-	int timeprime = 0; double Nintervall = (double) msd_intervall / (double) n_timesteps;
-	while (timeprime + msd_intervall <= n_timesteps) {
-		msd_time = 0;
-		for (int time = 1; time < msd_intervall; time++ ) {
-			msd_time += evalSquaredDisplacementAtTime(n_particles, pos, time, timeprime)/msd_intervall;
-			msd[time-1] += msd_time / Nintervall;
-		}
-		timeprime += msd_intervall;
 	}
 	
 }
@@ -314,7 +291,7 @@ void evalVelocityCorrelationStandard(int n_timesteps, int n_particles, double (*
 
 void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)[N_ATOMS][3], double mass,
 		double *vcf, int vcf_intervall) {
-	int t; int i; int l;
+	int t; int i;
 	double velExtended_x[2*vcf_intervall]; 
 	double velExtended_y[2*vcf_intervall];
 	double velExtended_z[2*vcf_intervall];
@@ -340,8 +317,8 @@ void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)
 	work_r = gsl_fft_real_workspace_alloc(vcf_intervall);
 	real = gsl_fft_real_wavetable_alloc(vcf_intervall);
 	
-	for(l = 0; l < vcf_intervall; l++) {
-		vcf[l] = 0;
+	for(t = 0; t < vcf_intervall; t++) {
+		vcf[t] = 0;
 	}
 	int n_t_start;
 	
@@ -380,12 +357,82 @@ void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)
 			gsl_fft_real_transform(fourier_y, 1, vcf_intervall, real, work_r);
 			gsl_fft_real_transform(fourier_z, 1, vcf_intervall, real, work_r);
 			
-			for(l = 0; l < vcf_intervall; l++) {
-				vcf[l] += (fourier_x[l] + fourier_y[l] + fourier_z[l])*normfactor;
+			for(t = 0; t < vcf_intervall; t++) {
+				vcf[t] += (fourier_x[t] + fourier_y[t] + fourier_z[t])*normfactor;
 			}
 			
 			n_t_start += vcf_intervall;
 			
+		}
+	}
+}
+
+void powerspectrum(double *data, double *powspec_data, int n) /* input data, output powspec_data, number of timesteps */
+{
+	/* Declaration of variables */
+	int i;
+	double complex_coefficient[2*n]; // array for the complex fft data
+	double data_cp[n]; 
+
+	/*make copy of data to avoid messing with data in the transform*/
+	for (i = 0; i < n; i++)	{
+		data_cp[i] = data[i];
+	}
+
+	/*Declare wavetable and workspace for fft*/
+	gsl_fft_real_wavetable *real;
+	gsl_fft_real_workspace *work;
+
+	/*Allocate space for wavetable and workspace for fft*/
+	work = gsl_fft_real_workspace_alloc(n);
+	real = gsl_fft_real_wavetable_alloc(n);
+
+	/*Do the fft*/
+	gsl_fft_real_transform(data_cp, 1, n, real, work);	
+	
+	/*Unpack the output into array with alternating real and imaginary part*/	
+	gsl_fft_halfcomplex_unpack(data_cp, complex_coefficient,1,n);
+	
+	/*fill the output powspec_data with the powerspectrum */
+	for (i = 0; i < n; i++)	{
+		powspec_data[i] = (complex_coefficient[2*i]*complex_coefficient[2*i]+complex_coefficient[2*i+1]*complex_coefficient[2*i+1])/n; 
+	}
+	
+	/*Free memory of wavetable and workspace*/
+	gsl_fft_real_wavetable_free(real);
+	gsl_fft_real_workspace_free(work);
+}
+
+
+/* Shifts the input powspec_data to center the 0 frequency */
+void powerspectrum_shift(double *powspec_data, int n) /* input data, timestep, number of timesteps */
+{
+	/* Declaration of variables */
+	int i;
+	
+	/* make copy of fft_data as reference for the shift */ 
+	double powspec_cp[n];
+	for (i = 0; i < n; i++)	{
+		powspec_cp[i] = powspec_data[i];
+	}
+
+	/* make shift */
+	for (i = 0; i < n; i++)	{
+		if (n % 2) /*if n odd*/	{ 
+			if (i<=(n-2)/2)	{
+				powspec_data[i] = powspec_cp[(i+(n+1)/2)];
+			}
+			else {
+				powspec_data[i] = powspec_cp[(i+(n+1)/2)%(n)];
+			}			
+		}
+		else {
+			if (i<n/2) {
+				powspec_data[i] = powspec_cp[i+n/2];
+			}
+			else {
+				powspec_data[i] = powspec_cp[(i+n/2)%(n)];
+			}			
 		}
 	}
 }
@@ -762,7 +809,7 @@ void runTask5(char phase) {
 void runTask6(char alg) {
 	if (alg == 's') { // As task 4
 		double a0 = 4.03; double mass = 27.0 / 9649.0;
-		int N = 4; int n_t_equi = 10000; int n_t = 100000; double dt = 1e-3; int natoms = N_ATOMS; int nt_skip = 10;
+		int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS; 
 		double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 		double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 		int i; int j;
@@ -815,7 +862,7 @@ void runTask6(char alg) {
 		
 		free(positions);
 				
-		double *VCF; double *time; int vcf_intervall = 500;
+		double *VCF; double *time; int vcf_intervall = 5000;
 						
 		VCF = malloc((n_t+1-vcf_intervall) * sizeof(double));
 		
@@ -823,7 +870,7 @@ void runTask6(char alg) {
 		time = malloc((n_t+1-vcf_intervall) * sizeof(double));
 		arange(time, 0.0, n_t+1-vcf_intervall, dt);
 		
-		saveDataToFile("6/VCF_dt0.001_standard.csv", VCF, time,  n_t+1-vcf_intervall, nt_skip);
+		saveDataToFile("6/VCF_dt0.001_standard.csv", VCF, time,  n_t+1-vcf_intervall, 10);
 		
 		free(momenta);
 		free(VCF);
@@ -831,7 +878,7 @@ void runTask6(char alg) {
 	}
 	else if (alg == 'f') { // As task 4
 		double a0 = 4.03; double mass = 27.0 / 9649.0;
-		int N = 4; int n_t_equi = 10000; int n_t = 100000; double dt = 1e-3; int natoms = N_ATOMS; int nt_skip = 10; 
+		int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
 		double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 		double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 		int i; int j;
@@ -892,7 +939,7 @@ void runTask6(char alg) {
 		time = malloc((vcf_intervall) * sizeof(double));
 		arange(time, 0.0, vcf_intervall, dt);
 		
-		saveDataToFile("6/VCF_dt0.001_fast.csv", VCF, time,  vcf_intervall, nt_skip);
+		saveDataToFile("6/VCF_dt0.001_fast.csv", VCF, time,  vcf_intervall, 1);
 		
 		free(momenta);
 		free(VCF);
@@ -901,6 +948,86 @@ void runTask6(char alg) {
 	else {
 		printf("Phase should be s for standard or f for Fast Correlation Algorithm");
 	}
+}
+
+void runTask7() {
+	double a0 = 4.03; double mass = 27.0 / 9649.0;
+	int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
+	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
+	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+	int i; int j;
+
+	positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
+	momenta_equi = malloc((n_t_equi+1) * sizeof *momenta_equi);
+	a0_equi = malloc((n_t_equi) * sizeof(double));
+	
+	init_fcc(positions_equi[0], N, a0);
+	
+	gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937);
+	for (i = 0; i < natoms; i++) {
+		for (j = 0; j < 3; j++) {
+			positions_equi[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
+			momenta_equi[0][i][j] = 0.0;
+		}
+	}
+		
+	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq, tau_T, tau_P, 
+			positions_equi, momenta_equi, a0_equi);
+	
+	
+	for (i = 0; i < natoms; i++) {
+		for (j = 0; j < 3; j++) {
+			positions_equi[0][i][j] = positions_equi[n_t_equi][i][j];
+			momenta_equi[0][i][j] = momenta_equi[n_t_equi][i][j];
+		}
+	}
+	
+	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
+			positions_equi, momenta_equi, a0_equi);
+	
+	
+	double (*positions)[natoms][3]; double (*momenta)[natoms][3];
+	
+	positions = malloc((n_t+1) * sizeof *positions);
+	momenta = malloc((n_t+1) * sizeof *momenta);
+			
+	for (i = 0; i < natoms; i++) {
+		for (j = 0; j < 3; j++) {
+			positions[0][i][j] = positions_equi[n_t_equi][i][j];
+			momenta[0][i][j] = momenta_equi[n_t_equi][i][j];
+		}
+	}
+	
+	free(positions_equi);
+	free(momenta_equi);
+	
+	velocity_verlet(n_t, natoms, a0_equi[n_t_equi - 1], positions, momenta, dt, mass, N);
+	
+	free(positions);
+	
+	double *VCF; int vcf_intervall = 1000; double *ps;
+							
+	VCF = malloc((vcf_intervall) * sizeof(double));
+	ps = malloc((vcf_intervall) * sizeof(double));
+	
+	evalVelocityCorrelationFast(n_t, natoms, momenta, mass, VCF, vcf_intervall);
+	
+	
+	powerspectrum(VCF, ps, vcf_intervall);
+	//powerspectrum_shift(ps, vcf_intervall);
+	
+	double *frequencies;
+	frequencies = malloc((vcf_intervall) * sizeof(double));
+	for(int i = 0; i < vcf_intervall; i++){
+		frequencies[i] = i / (dt * vcf_intervall);// - 1.0 / (2.0 * dt);
+	}
+	
+	saveDataToFile("7/powerspectrum.csv", ps, frequencies, vcf_intervall, 1);
+	
+	free(momenta);
+	free(VCF);
+	free(ps);
+	free(frequencies);
 }
 
 /* Main program */
@@ -915,7 +1042,8 @@ int main()
 	//runTask5('s');
 	//runTask5('l');
 	//runTask6('s');
-	runTask6('f');
+	//runTask6('f');
+	runTask7();
 	
 	return 0;   
 }
