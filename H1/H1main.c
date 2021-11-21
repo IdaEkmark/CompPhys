@@ -145,7 +145,7 @@ int main()
      * Task 2
      */
     
-	double a0 = 4.03; int N = 4; int n_t = 1000; double dt = 2e-2; int natoms = N_ATOMS; double mass = 27.0 / 9649.0;
+	double a0 = 4.03; int N = 4; int n_t = 20000; double dt = 1e-3; int natoms = N_ATOMS; double mass = 27.0 / 9649.0;
 	double (*positions)[natoms][3]; double (*momenta)[natoms][3]; double standardpositions[natoms][3];
 	double *E_pot; double *E_kin; double *time;
 	int i; int j; int t;
@@ -174,8 +174,8 @@ int main()
 	
 	time = malloc((n_t+1) * sizeof(double));
 	arange(time, 0.0, n_t+1, dt);
-	saveEpotsToFile("2/Epot_dt0.02.csv", E_pot, time, n_t);
-	saveEpotsToFile("2/Ekin_dt0.02.csv", E_kin, time, n_t);
+	saveEpotsToFile("2/Epot_dt0.001.csv", E_pot, time, n_t);
+	saveEpotsToFile("2/Ekin_dt0.001.csv", E_kin, time, n_t);
 	
 	
     free(positions);

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # skip_header skips the first
 # row in data.csv
-dt = 2e-2
+dt = 1e-3
 filename = "E_dt" + str(dt)
 filename_p = "Epot_dt" + str(dt)
 filename_k = "Ekin_dt" + str(dt)
@@ -24,7 +24,7 @@ t_k = array_k[:, 0]
 E_k = array_k[:, 1]
 T = 2*np.mean(E_k)/(3*N) / (8.6e-5)
 
-fig, ax = plt.subplots(figsize=(11,7))
+fig, ax = plt.subplots(figsize=(7.5,5))
 ax.plot(t_p, E_p, label = '$E_{potential}$')
 ax.plot(t_k, E_k, label = '$E_{kinetic}$')
 ax.plot(t_k, E_k+E_p, label = '$E_{total}$')
