@@ -952,7 +952,7 @@ void runTask6(char alg) {
 
 void runTask7() {
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
-	int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
+	int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 5e-3; int natoms = N_ATOMS;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
