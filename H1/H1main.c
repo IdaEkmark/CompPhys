@@ -22,6 +22,8 @@
 #define K_B 8.6e-5
 #define KAPPA_T 2.10
 #define PI 3.141592653589
+#define REAL(z,i) ((z)[2*(i)])
+#define IMAG(z,i) ((z)[2*(i)+1])
 
 void arange(double *array, double start, int len_t, double dt){
     for(int i = 0; i < len_t; i++){
@@ -295,14 +297,14 @@ void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)
 	double velExtended_x[2*vcf_intervall]; 
 	double velExtended_y[2*vcf_intervall];
 	double velExtended_z[2*vcf_intervall];
-	double invFourierVelExtended_x[2*vcf_intervall]; 
-	double invFourierVelExtended_y[2*vcf_intervall];
-	double invFourierVelExtended_z[2*vcf_intervall];
+	double invFourierVelExtended_x[2*(2*vcf_intervall)]; 
+	double invFourierVelExtended_y[2*(2*vcf_intervall)];
+	double invFourierVelExtended_z[2*(2*vcf_intervall)];
 	double fourier_x[2*vcf_intervall]; 
 	double fourier_y[2*vcf_intervall];
 	double fourier_z[2*vcf_intervall];
 	double normfactor = (double) vcf_intervall/((double)n_timesteps * (double)n_particles) ;
-
+	
 	/*Declare wavetable and workspace for fft*/
 	gsl_fft_complex_wavetable *comp;
 	gsl_fft_complex_workspace *work_c;
@@ -338,9 +340,12 @@ void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)
 			
 			/*make copy of data to avoid messing with data in the transform*/
 			for (t = 0; t < 2*vcf_intervall; t++)	{
-				invFourierVelExtended_x[t] = velExtended_x[t];
-				invFourierVelExtended_y[t] = velExtended_y[t];
-				invFourierVelExtended_z[t] = velExtended_z[t];
+				REAL(invFourierVelExtended_x, t) = velExtended_x[t];
+				IMAG(invFourierVelExtended_x, t) = 0.0;
+				REAL(invFourierVelExtended_y, t) = velExtended_y[t];
+				IMAG(invFourierVelExtended_y, t) = 0.0;
+				REAL(invFourierVelExtended_z, t) = velExtended_z[t];
+				IMAG(invFourierVelExtended_z, t) = 0.0;
 			}
 	
 			/*Do the fft*/
@@ -349,16 +354,20 @@ void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)
 			gsl_fft_complex_inverse(invFourierVelExtended_z, 1, vcf_intervall, comp, work_c);
 			 
 			for (t = 0; t < 2*vcf_intervall; t++)	{
-				fourier_x[t] = invFourierVelExtended_x[t]*invFourierVelExtended_x[t];//gsl_complex_abs2(invFourierVelExtended_x[t]);
-				fourier_y[t] = invFourierVelExtended_y[t]*invFourierVelExtended_y[t];//gsl_complex_abs2(invFourierVelExtended_y[t]);
-				fourier_z[t] = invFourierVelExtended_z[t]*invFourierVelExtended_z[t];//gsl_complex_abs2(invFourierVelExtended_z[t]);
+				fourier_x[t] = REAL(invFourierVelExtended_x, t)*REAL(invFourierVelExtended_x, t) + 
+								IMAG(invFourierVelExtended_x, t)*IMAG(invFourierVelExtended_x, t);
+				fourier_y[t] = REAL(invFourierVelExtended_y, t)*REAL(invFourierVelExtended_y, t) + 
+								IMAG(invFourierVelExtended_y, t)*IMAG(invFourierVelExtended_y, t);
+
+				fourier_z[t] = REAL(invFourierVelExtended_z, t)*REAL(invFourierVelExtended_z, t) + 
+								IMAG(invFourierVelExtended_z, t)*IMAG(invFourierVelExtended_z, t);
 			}
 			gsl_fft_real_transform(fourier_x, 1, vcf_intervall, real, work_r);
 			gsl_fft_real_transform(fourier_y, 1, vcf_intervall, real, work_r);
 			gsl_fft_real_transform(fourier_z, 1, vcf_intervall, real, work_r);
 			
 			for(t = 0; t < vcf_intervall; t++) {
-				vcf[t] += (fourier_x[t] + fourier_y[t] + fourier_z[t])*normfactor;
+				vcf[t] += (fourier_x[2*t+1] + fourier_y[2*t+1] + fourier_z[2*t+1])*normfactor;
 			}
 			
 			n_t_start += vcf_intervall;
@@ -367,82 +376,26 @@ void evalVelocityCorrelationFast(int n_timesteps, int n_particles, double (*mom)
 	}
 }
 
-void powerspectrum(double *data, double *powspec_data, int n) /* input data, output powspec_data, number of timesteps */
+void powerspectrum(double *data, double *powspec, int n, double dt, double *omegas, int n_omegas, double domega) /* input data, output powspec_data, number of timesteps */
 {
-	/* Declaration of variables */
-	int i;
-	double complex_coefficient[2*n]; // array for the complex fft data
-	double data_cp[n]; 
-
-	/*make copy of data to avoid messing with data in the transform*/
-	for (i = 0; i < n; i++)	{
-		data_cp[i] = data[i];
-	}
-
-	/*Declare wavetable and workspace for fft*/
-	gsl_fft_real_wavetable *real;
-	gsl_fft_real_workspace *work;
-
-	/*Allocate space for wavetable and workspace for fft*/
-	work = gsl_fft_real_workspace_alloc(n);
-	real = gsl_fft_real_wavetable_alloc(n);
-
-	/*Do the fft*/
-	gsl_fft_real_transform(data_cp, 1, n, real, work);	
-	
-	/*Unpack the output into array with alternating real and imaginary part*/	
-	gsl_fft_halfcomplex_unpack(data_cp, complex_coefficient,1,n);
-	
-	/*fill the output powspec_data with the powerspectrum */
-	for (i = 0; i < n; i++)	{
-		powspec_data[i] = (complex_coefficient[2*i]*complex_coefficient[2*i]+complex_coefficient[2*i+1]*complex_coefficient[2*i+1])/n; 
-	}
-	
-	/*Free memory of wavetable and workspace*/
-	gsl_fft_real_wavetable_free(real);
-	gsl_fft_real_workspace_free(work);
-}
-
-
-/* Shifts the input powspec_data to center the 0 frequency */
-void powerspectrum_shift(double *powspec_data, int n) /* input data, timestep, number of timesteps */
-{
-	/* Declaration of variables */
-	int i;
-	
-	/* make copy of fft_data as reference for the shift */ 
-	double powspec_cp[n];
-	for (i = 0; i < n; i++)	{
-		powspec_cp[i] = powspec_data[i];
-	}
-
-	/* make shift */
-	for (i = 0; i < n; i++)	{
-		if (n % 2) /*if n odd*/	{ 
-			if (i<=(n-2)/2)	{
-				powspec_data[i] = powspec_cp[(i+(n+1)/2)];
-			}
-			else {
-				powspec_data[i] = powspec_cp[(i+(n+1)/2)%(n)];
-			}			
+	double omega = 0;
+	for(int i = 0; i < n_omegas; i++){
+		omegas[i] = omega;
+		powspec[i] = 0;
+		for(int j = 0; j < n; j++) {
+			powspec[i] += data[j] * cos(omega * data[j]); 
 		}
-		else {
-			if (i<n/2) {
-				powspec_data[i] = powspec_cp[i+n/2];
-			}
-			else {
-				powspec_data[i] = powspec_cp[(i+n/2)%(n)];
-			}			
-		}
+		powspec[i] *= 2*dt;
+		omega += domega;
 	}
 }
 
 void runTask1() {
 	double *a0s; int N = 4; int natoms = N_ATOMS; double X[natoms][3];
-	double *E_pots; int na = 1001; double da = 2/((double)na-1);
+	double *E_pots; int na = 11; double da = 0.1/((double)na-1);
 
 	a0s = malloc(na * sizeof(double));
-	arange(a0s, 3.0, na, da);
+	arange(a0s, 4, na, da);
 
 	E_pots = malloc(na * sizeof(double));
 
@@ -939,7 +892,7 @@ void runTask6(char alg) {
 		time = malloc((vcf_intervall) * sizeof(double));
 		arange(time, 0.0, vcf_intervall, dt);
 		
-		saveDataToFile("6/VCF_dt0.001_fast.csv", VCF, time,  vcf_intervall, 1);
+		saveDataToFile("6/VCF_dt0.01_fast.csv", VCF, time,  vcf_intervall, 1);
 		
 		free(momenta);
 		free(VCF);
@@ -952,7 +905,7 @@ void runTask6(char alg) {
 
 void runTask7() {
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
-	int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 5e-3; int natoms = N_ATOMS;
+	int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
@@ -1005,36 +958,32 @@ void runTask7() {
 	
 	free(positions);
 	
-	double *VCF; int vcf_intervall = 1000; double *ps;
-							
+	double *VCF; int vcf_intervall = 1000;
+								
 	VCF = malloc((vcf_intervall) * sizeof(double));
-	ps = malloc((vcf_intervall) * sizeof(double));
+	
 	
 	evalVelocityCorrelationFast(n_t, natoms, momenta, mass, VCF, vcf_intervall);
 	
+	double *omegas; double *powspec; int n_omegas = 1000; double domega = 0.001;
+	omegas = malloc((n_omegas) * sizeof(double));
+	powspec = malloc((n_omegas) * sizeof(double));
 	
-	powerspectrum(VCF, ps, vcf_intervall);
-	powerspectrum_shift(ps, vcf_intervall);
+	powerspectrum(VCF, powspec, vcf_intervall, dt, omegas, n_omegas, domega);
 	
-	double *frequencies;
-	frequencies = malloc((vcf_intervall) * sizeof(double));
-	for(int i = 0; i < vcf_intervall; i++){
-		frequencies[i] = i / (dt * vcf_intervall) - 1.0 / (2.0 * dt);
-	}
-	
-	saveDataToFile("7/powerspectrum.csv", ps, frequencies, vcf_intervall, 1);
+	saveDataToFile("7/powerspectrum.csv", powspec, omegas, n_omegas, 1);
 	
 	free(momenta);
 	free(VCF);
-	free(ps);
-	free(frequencies);
+	free(powspec);
+	free(omegas);
 }
 
 /* Main program */
 int main()
 {
 	//runTask1();
-	//runTask2(0.001);
+	runTask2(0.001);
 	//runTask2(0.01);
 	//runTask2(0.02);
 	//runTask3();
@@ -1043,7 +992,7 @@ int main()
 	//runTask5('l');
 	//runTask6('s');
 	//runTask6('f');
-	runTask7();
+	//runTask7();
 	
 	return 0;   
 }
