@@ -588,7 +588,7 @@ void runTask4() {
 	velocity_verlet_equi(n_t_equi, natoms, a0_equi[n_t_equi], dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi2);
 	
-	a0_equi2[0] =  a0_equi[n_t];
+	a0_equi2[0] = a0_equi[n_t_equi];
 	for (t = 0; t < n_t_equi + 1; t++){
 		a0_equi[n_t_equi + 1 + t] = a0_equi2[t];
 	}
@@ -963,7 +963,7 @@ int main()
 	//runTask2(0.001);
 	//runTask2(0.01);
 	//runTask2(0.02);
-	runTask3();
+	//runTask3();
 	runTask4();
 	//runTask5('s');
 	//runTask5('l');

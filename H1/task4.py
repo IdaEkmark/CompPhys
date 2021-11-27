@@ -85,8 +85,8 @@ ax1.set_xlabel('$t$ (ps)', fontsize=axisfontsize)
 ax1.set_ylim([0,1300])
 ax1.grid()
 #ax1.set_xlim([-0.1,20])
-ax2.plot(np.array([t_P[10000],t_P[10000]]), np.array([-1,1.7]), '--', color = 'k')
-ax2.plot(np.array([t_P[20000],t_P[20000]]), np.array([-1,1.7]), ':', color = 'k')
+ax2.plot(np.array([t_P[10000],t_P[10000]]), np.array([-1.5, 2]), '--', color = 'k')
+ax2.plot(np.array([t_P[20000],t_P[20000]]), np.array([-1.5, 2]), ':', color = 'k')
 ax2.plot(t_P, P_inst)
 ax2.set_xlabel('$t$ (ps)', fontsize=axisfontsize)
 ax2.set_ylabel('$P_\mathrm{instantaneous}$ (GPa)', fontsize=axisfontsize)
@@ -107,9 +107,9 @@ filename = "a0_dt" + str(dt)
 
 array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 
-t1 = array[1:10000, 0]
+t1 = array[0:10002, 0]
 t2 = array[10002:, 0]
-a01 = array[1:10000, 1]
+a01 = array[0:10002, 1]
 a02 = array[10002:, 1]
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))

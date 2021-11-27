@@ -106,8 +106,8 @@ filename = "a0_dt" + str(dt)
 
 array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 
-t = array[1:, 0]
-a0 = array[1:, 1]
+t = array[:, 0]
+a0 = array[:, 1]
 
 fig, ax = plt.subplots(figsize=(7,5))
 ax.plot(t, a0)
