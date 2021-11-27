@@ -16,6 +16,6 @@ for N, I in zip(N_vec, I_vec):
     err = np.sqrt(f_var / (float(N)-1))
 
     plt.hist(x_i, bins = 'auto')
-    plt.title('I=' + str(I) + ', N=' + str(N) + ', error is ' + str(np.round(err, 5)))
+    plt.title('I=' + str(I) + ', N=' + str(N) + ', std=' + str(np.round(err, 5)))
     plt.show()
 

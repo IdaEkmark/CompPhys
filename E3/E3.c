@@ -5,6 +5,16 @@
 
 #define PI 3.141592653589
 
+void saveDataToFile1D(char *fname, double *yvals, int n_points)
+{
+    FILE *fp = fopen(fname, "w");
+    fprintf(fp, "Data\n");
+    for(int i = 0; i < n_points; i++){
+	    fprintf(fp, "%f,\n", yvals[i]);
+    }
+    fclose(fp);
+}
+
 void saveDataToFile(char *fname, double *yvals, double *tvals, int n_points, int n_skip)
 {
     FILE *fp = fopen(fname, "w");
@@ -65,7 +75,7 @@ double monteCarloIntegrationTask2(int N, gsl_rng * r, double x_i_vec[], double g
 void task12() {
 	double a = 0; double b = 1; int N[4] = {10, 100, 1000, 10000}; double I[4];
 	gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937); 
-	gsl_rng_set(r, 7);
+	gsl_rng_set(r, 3);
 	double x_i_mat[4][N[3]]; double f_i_mat[4][N[3]]; double g_i_mat[4][N[3]];
 	
 	printf("Task 1\n");
@@ -120,12 +130,13 @@ double metropolisTask3(double delta, gsl_rng * r, int N, double fraction_use){
 }
 
 void task3() {
+	printf("\n\nTask 3\n");
 	double delta = 2; int N = 100000000; double fraction_use = 0.8;
 	gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937); 
-	gsl_rng_set(r, 3);
+	gsl_rng_set(r, 17);
 	
 	double I = metropolisTask3(delta, r, N, fraction_use);
-	
+
 	printf("I = %.4e\n", I);
 }
 
@@ -163,11 +174,12 @@ double evalCorrelationFunction2(double f[], int k, int N) {
 	return num / denom;
 }
 
-int evalStatisticalInefficiency1(double f[], int N) {
+int evalStatisticalInefficiency1(double f[], int N, double phi_vec[]) {
 	int k = 0; double phi = 100;
 	while (phi > 0.135) {
+		k++; 
 		phi = evalCorrelationFunction1(f, k, N);
-		k++;
+		phi_vec[k-1] = phi;
 	}
 	return k;
 }
@@ -178,6 +190,7 @@ int evalStatisticalInefficiency2(double f[], int N) {
 		phi = evalCorrelationFunction2(f, k, N);
 		k++;
 	}
+	
 	return k;
 }
 
@@ -213,31 +226,55 @@ double evalStatisticalInefficiencyBlockAtB(double f[], int N, int B) {
 	return s;
 }
 
-double evalStatisticalInefficiencyBlock(double f[], int N, double tol) {
-	double s_old = -12.0; double s_new = -10.0; int B = 500; int i = 0;
-	while (fabs(s_old - s_new) > tol) {
-		B += 500;
-		printf("B=%i\n", B);
-		i++;
-		s_old = s_new;
-		s_new = evalStatisticalInefficiencyBlockAtB(f, N, B);
-		printf("s_new = %.4e\n", s_new);
+void evalStatisticalInefficiencyBlock(double f[], int N, double s_vec[], double B_vec[]) {
+	double s; int B = 1; int i = 0;
+	while (B <= N/2) {
+		if ( N % B == 0 ) {
+			s = evalStatisticalInefficiencyBlockAtB(f, N, B);
+			s_vec[i] = s;
+			B_vec[i] = B;
+			i++;
+			//printf("Kan dela en miljon med %i heltal, B=%i, s=%.1f\n", i, B, s);
+		}
+		/*if (i % 100 == 0) {
+			printf("i=%i\n", i);
+		}*/
+		B += 1;
+		
 	}
-	return s_new;
+}
+
+void evalMeanedA(double a[], double a_meaned[], int n){
+	double a_mean=0;
+	for (int i=0; i<n; i++) {
+		a_mean += a[i];
+	}
+	a_mean /= (double) n;
+	for (int i=0; i<n; i++){
+		a_meaned[i] = a[i] - a_mean;
+	}
 }
 
 void task4() {
-	int N = 1000000; double f[N];
+	int N = 1000000; double *f; double *f_meaned; double s_vec[48]; double B_vec[48]; double phi_vec[181];
+	f = malloc((N) * sizeof(double));
+	f_meaned = malloc((N) * sizeof(double));
 	readData("MC.txt", f, N);
 	
-	int s = evalStatisticalInefficiency1(f, N);
-	printf("s_1 = %i\n", s);
-	s = evalStatisticalInefficiency2(f, N);
-	printf("s_2 = %i\n", s);
+	evalMeanedA(f, f_meaned, N);
+
+	printf("\n\nTask 4\n");
+	int s = evalStatisticalInefficiency1(f_meaned, N, phi_vec);
+	printf("s = %i\n", s);
+	saveDataToFile1D("4/phi.csv", phi_vec, 181);
+	//s = evalStatisticalInefficiency2(f, N);
+	//printf("s_2 = %i\n", s);
 	
-	double tol = 1e-5;
-	double s_b = evalStatisticalInefficiencyBlock(f, N, tol);
-	printf("s_block = %f\n", s_b);
+	//evalStatisticalInefficiencyBlock(f_meaned, N, s_vec, B_vec);
+	//saveDataToFile("4/block.csv", s_vec, B_vec, 48, 1);
+	
+	free(f);
+	free(f_meaned);
 }
 
 
