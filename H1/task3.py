@@ -77,17 +77,22 @@ print('T = ' + str(np.mean(T_inst[10000:])))
 print('P = ' + str(np.mean(P_inst[10000:])))
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))
+ax1.plot(np.array([t_T[10000],t_T[10000]]), np.array([0,1100]), '--', color = 'k')
 ax1.plot(t_T, T_inst)
 ax1.set_ylabel('$T_\mathrm{instantaneous}$ ($^\mathrm{o}$C)', fontsize=axisfontsize)
 ax1.set_xlabel('$t$ (ps)', fontsize=axisfontsize)
 ax1.set_ylim([0,1100])
 ax1.grid()
 #ax1.set_xlim([-0.1,20])
+ax2.plot(np.array([t_P[10000],t_P[10000]]), np.array([-0.15,0.5]), '--', color = 'k')
 ax2.plot(t_P, P_inst)
 ax2.set_xlabel('$t$ (ps)', fontsize=axisfontsize)
 ax2.set_ylabel('$P_\mathrm{instantaneous}$ (GPa)', fontsize=axisfontsize)
 ax2.set_ylim([-0.15,0.5])
 ax2.grid()
+
+ax2.legend(['Equilibration'], fontsize=axisfontsize)
+
 #ax2.set_xlim([-0.1,20])
 plt.suptitle('$T=$' + str(int(np.rint(np.mean(T_inst[10000:])))) + ' $^\mathrm{o}$C and $P=$' +
              str(np.round(np.mean(P_inst[10000:]),5)) + ' GPa during constant energy and volume simulation',
