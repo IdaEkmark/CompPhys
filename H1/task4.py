@@ -103,6 +103,8 @@ plt.tight_layout()
 plt.show()
 fig.savefig(folder + 'InstantaneousTemperaturePressure' + '_liquid.pdf')
 
+print(np.mean(P_inst[3*nequi:]))
+
 
 filename = "a0_dt" + str(dt)
 

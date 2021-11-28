@@ -20,7 +20,7 @@
 
 #define N_ATOMS 256
 #define K_B 8.6e-5
-#define KAPPA_T 2.10
+#define KAPPA_T 2.216
 #define PI 3.141592653589
 #define REAL(z,i) ((z)[2*(i)])
 #define IMAG(z,i) ((z)[2*(i)+1])
@@ -547,7 +547,7 @@ void runTask4() {
 	int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 1;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi; double *a0_equi2;
 	double *temperature; double *pressure; double *time;  double *timeTP; double *timeA0;
-	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 3.12e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j; int t;
 
 	positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
@@ -567,7 +567,7 @@ void runTask4() {
 		}
 	}
 		
-	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq, tau_T, tau_P, 
+	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq_init, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi);
 	
 	a0_equi[0] = a0;
@@ -578,22 +578,23 @@ void runTask4() {
 	}
 	
 	a0 = a0_equi[n_t_equi];
-	init_fcc(positions_equi[0], N, a0);
+	//init_fcc(positions_equi[0], N, a0);
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
-			positions_equi[0][i][j] += a0 * (-0.065 + 0.13 * gsl_rng_uniform(r));
-			momenta_equi[0][i][j] = 0.0;
+			positions_equi[0][i][j] = positions_equi[n_t_equi][i][j];
+			momenta_equi[0][i][j] = momenta_equi[n_t_equi][i][j];
 		}
 	}
 	
+	a0_equi2[0] = a0_equi[n_t_equi];
 	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi2);
 	
+	
 	a0_equi2[0] = a0_equi[n_t_equi];
-	for (t = 0; t < n_t_equi + 1; t++){
+	for (t = 0; t < n_t_equi + 1; t++) {
 		a0_equi[n_t_equi + 1 + t] = a0_equi2[t];
 	}
-	a0_equi2[0] = a0_equi[n_t_equi];
 	for ( t = 0; t < n_t_equi + 1; t++ ) {
 		temperature[t + n_t_equi + 1] = getInstantaneousTemperature(momenta_equi[t], natoms, mass);
 		pressure[t + n_t_equi + 1] = getInstantaneousPressure(positions_equi[t], momenta_equi[t], natoms, N*a0_equi2[t], mass);
@@ -965,11 +966,11 @@ int main()
 	//runTask2(0.01);
 	//runTask2(0.02);
 	//runTask3();
-	//runTask4();
+	runTask4();
 	//runTask5('s');
 	//runTask5('l');
-	runTask6('s');
-	runTask6('f');
+	//runTask6('s');
+	//runTask6('f');
 	//runTask7();
 	
 	return 0;   
