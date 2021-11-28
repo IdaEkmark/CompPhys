@@ -463,7 +463,7 @@ void runTask2(double dt) {
 
 void runTask3() {
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
-	int N = 4; int n_t_equi = 10000; int n_t = 30000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 1;
+	int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 1;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 	double *temperature; double *pressure; double *time;  double *timeTP; double *timeA0;
 	double T_eq = 500 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
@@ -544,7 +544,7 @@ void runTask3() {
 
 void runTask4() {
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
-	int N = 4; int n_t_equi = 10000; int n_t = 30000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 1;
+	int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 1;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi; double *a0_equi2;
 	double *temperature; double *pressure; double *time;  double *timeTP; double *timeA0;
 	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
@@ -577,6 +577,7 @@ void runTask4() {
 		pressure[t] = getInstantaneousPressure(positions_equi[t], momenta_equi[t], natoms, N*a0_equi[t], mass);
 	}
 	
+	a0 = a0_equi[n_t_equi];
 	init_fcc(positions_equi[0], N, a0);
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
@@ -585,7 +586,7 @@ void runTask4() {
 		}
 	}
 	
-	velocity_verlet_equi(n_t_equi, natoms, a0_equi[n_t_equi], dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
+	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi2);
 	
 	a0_equi2[0] = a0_equi[n_t_equi];
@@ -615,7 +616,7 @@ void runTask4() {
 	free(positions_equi);
 	free(momenta_equi);
 	
-	velocity_verlet(n_t, natoms, a0_equi2[n_t_equi - 1], positions, momenta, dt, mass, N);
+	velocity_verlet(n_t, natoms, a0_equi2[n_t_equi], positions, momenta, dt, mass, N);
 	
 	for ( t = 0; t < n_t + 1; t++ ) {
 		temperature[t + 2*n_t_equi + 2] = getInstantaneousTemperature(momenta[t], natoms, mass);
@@ -651,7 +652,7 @@ void runTask4() {
 void runTask5(char phase) {
 	if (phase == 's') { // As task 3
 		double a0 = 4.03; double mass = 27.0 / 9649.0;
-		int N = 4; int n_t_equi = 10000; int n_t = 80000; double dt = 1e-3; int natoms = N_ATOMS;
+		int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
 		double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 		double T_eq = 500 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 		int i; int j; 
@@ -711,14 +712,14 @@ void runTask5(char phase) {
 	
 	else if (phase == 'l') { // As task 4
 		double a0 = 4.03; double mass = 27.0 / 9649.0;
-		int N = 4; int n_t_equi = 10000; int n_t = 80000; double dt = 1e-3; int natoms = N_ATOMS; 
+		int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS; 
 		double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 		double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 		int i; int j;
 	
 		positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
 		momenta_equi = malloc((n_t_equi+1) * sizeof *momenta_equi);
-		a0_equi = malloc((n_t_equi) * sizeof(double));
+		a0_equi = malloc((n_t_equi + 1) * sizeof(double));
 		
 		init_fcc(positions_equi[0], N, a0);
 		
@@ -733,7 +734,7 @@ void runTask5(char phase) {
 		velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq, tau_T, tau_P, 
 				positions_equi, momenta_equi, a0_equi);
 		
-		
+		a0 = a0_equi[n_t_equi];
 		init_fcc(positions_equi[0], N, a0);
 		for (i = 0; i < natoms; i++) {
 			for (j = 0; j < 3; j++) {
@@ -742,7 +743,7 @@ void runTask5(char phase) {
 			}
 		}
 		
-		velocity_verlet_equi(n_t_equi, natoms, a0_equi[n_t_equi - 1], dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
+		velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
 				positions_equi, momenta_equi, a0_equi);
 		
 		
@@ -761,7 +762,7 @@ void runTask5(char phase) {
 		free(positions_equi);
 		free(momenta_equi);
 		
-		velocity_verlet(n_t, natoms, a0_equi[n_t_equi - 1], positions, momenta, dt, mass, N);
+		velocity_verlet(n_t, natoms, a0_equi[n_t_equi], positions, momenta, dt, mass, N);
 		
 		free(momenta);
 				
@@ -788,14 +789,14 @@ void runTask5(char phase) {
 
 void runTask6(char alg) {// As task 4
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
-	int N = 4; int n_t_equi = 10000; int n_t = 80000; double dt = 5e-4; int natoms = N_ATOMS; 
+	int N = 4; int n_t_equi = 20000; int n_t = 100000; double dt = 5e-4; int natoms = N_ATOMS; 
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
 
 	positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
 	momenta_equi = malloc((n_t_equi+1) * sizeof *momenta_equi);
-	a0_equi = malloc((n_t_equi) * sizeof(double));
+	a0_equi = malloc((n_t_equi+1) * sizeof(double));
 	
 	init_fcc(positions_equi[0], N, a0);
 	
@@ -810,7 +811,7 @@ void runTask6(char alg) {// As task 4
 	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi);
 	
-	
+	a0 = a0_equi[n_t_equi];
 	init_fcc(positions_equi[0], N, a0);
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
@@ -819,7 +820,7 @@ void runTask6(char alg) {// As task 4
 		}
 	}
 	
-	velocity_verlet_equi(n_t_equi, natoms, a0_equi[n_t_equi - 1], dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
+	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi);
 	
 	
@@ -838,14 +839,14 @@ void runTask6(char alg) {// As task 4
 	free(positions_equi);
 	free(momenta_equi);
 	
-	velocity_verlet(n_t, natoms, a0_equi[n_t_equi - 1], positions, momenta, dt, mass, N);
+	velocity_verlet(n_t, natoms, a0_equi[n_t_equi], positions, momenta, dt, mass, N);
 	
 	free(positions);
 			
 	double *VCF; 
 					
 	if (alg == 's') { 
-		int vcf_intervall = 10000; double *time;
+		int vcf_intervall = 20000; double *time;
 		
 		VCF = malloc((n_t+1-vcf_intervall) * sizeof(double));
 		
@@ -858,7 +859,7 @@ void runTask6(char alg) {// As task 4
 		free(time);
 	}
 	else if (alg == 'f') { // As task 4
-		int vcf_intervall = 2000; double *time;
+		int vcf_intervall = 5000; double *time;
 								
 		VCF = malloc((vcf_intervall) * sizeof(double));
 		
@@ -881,14 +882,14 @@ void runTask6(char alg) {// As task 4
 
 void runTask7() {
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
-	int N = 4; int n_t_equi = 10000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
+	int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
 
 	positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
 	momenta_equi = malloc((n_t_equi+1) * sizeof *momenta_equi);
-	a0_equi = malloc((n_t_equi) * sizeof(double));
+	a0_equi = malloc((n_t_equi+1) * sizeof(double));
 	
 	init_fcc(positions_equi[0], N, a0);
 	
@@ -903,7 +904,7 @@ void runTask7() {
 	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq_init, P_eq, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi);
 	
-
+	a0 = a0_equi[n_t_equi];
 	init_fcc(positions_equi[0], N, a0);
 	for (i = 0; i < natoms; i++) {
 		for (j = 0; j < 3; j++) {
@@ -912,7 +913,7 @@ void runTask7() {
 		}
 	}
 	
-	velocity_verlet_equi(n_t_equi, natoms, a0_equi[n_t_equi - 1], dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
+	velocity_verlet_equi(n_t_equi, natoms, a0, dt, mass, N, T_eq, P_eq, tau_T, tau_P, 
 			positions_equi, momenta_equi, a0_equi);
 	
 	
@@ -931,7 +932,7 @@ void runTask7() {
 	free(positions_equi);
 	free(momenta_equi);
 	
-	velocity_verlet(n_t, natoms, a0_equi[n_t_equi - 1], positions, momenta, dt, mass, N);
+	velocity_verlet(n_t, natoms, a0_equi[n_t_equi], positions, momenta, dt, mass, N);
 	
 	free(positions);
 	
@@ -964,11 +965,11 @@ int main()
 	//runTask2(0.01);
 	//runTask2(0.02);
 	//runTask3();
-	runTask4();
+	//runTask4();
 	//runTask5('s');
 	//runTask5('l');
-	//runTask6('s');
-	//runTask6('f');
+	runTask6('s');
+	runTask6('f');
 	//runTask7();
 	
 	return 0;   

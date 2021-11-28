@@ -21,6 +21,8 @@ folder = "3/"
 N = 256
 axisfontsize = 14
 
+nequi = 20000
+
 array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 
 t = array[:, 0]
@@ -71,31 +73,31 @@ array_P = np.genfromtxt(folder + filename_P + '.csv', delimiter=',', skip_header
 t_T = array_T[:, 0]
 T_inst = array_T[:, 1] - 273.15
 t_P = array_P[:, 0]
-P_inst = array_P[:, 1] / (6.24e-7) * 1e-4
+P_inst = array_P[:, 1] / (6.24e-7)
 
-print('T = ' + str(np.mean(T_inst[10000:])))
-print('P = ' + str(np.mean(P_inst[10000:])))
+print('T = ' + str(np.mean(T_inst[nequi:])))
+print('P = ' + str(np.mean(P_inst[nequi:])))
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))
-ax1.plot(np.array([t_T[10000],t_T[10000]]), np.array([0,1100]), '--', color = 'k')
+ax1.plot(np.array([t_T[nequi],t_T[nequi]]), np.array([0,1100]), '--', color = 'k')
 ax1.plot(t_T, T_inst)
 ax1.set_ylabel('$T_\mathrm{instantaneous}$ ($^\mathrm{o}$C)', fontsize=axisfontsize)
 ax1.set_xlabel('$t$ (ps)', fontsize=axisfontsize)
 ax1.set_ylim([0,1100])
 ax1.grid()
 #ax1.set_xlim([-0.1,20])
-ax2.plot(np.array([t_P[10000],t_P[10000]]), np.array([-0.15,0.5]), '--', color = 'k')
+ax2.plot(np.array([t_P[nequi],t_P[nequi]]), np.array([-0.15*10000,0.5*10000]), '--', color = 'k')
 ax2.plot(t_P, P_inst)
 ax2.set_xlabel('$t$ (ps)', fontsize=axisfontsize)
-ax2.set_ylabel('$P_\mathrm{instantaneous}$ (GPa)', fontsize=axisfontsize)
-ax2.set_ylim([-0.15,0.5])
+ax2.set_ylabel('$P_\mathrm{instantaneous}$ (bar)', fontsize=axisfontsize)
+ax2.set_ylim([-0.15*10000,0.5*10000])
 ax2.grid()
 
 ax2.legend(['Equilibration'], fontsize=axisfontsize)
 
 #ax2.set_xlim([-0.1,20])
-plt.suptitle('$T=$' + str(int(np.rint(np.mean(T_inst[10000:])))) + ' $^\mathrm{o}$C and $P=$' +
-             str(np.round(np.mean(P_inst[10000:]),5)) + ' GPa during constant energy and volume simulation',
+plt.suptitle('$T=$' + str(int(np.rint(np.mean(T_inst[nequi:])))) + ' $^\mathrm{o}$C and $P=$' +
+             str(np.round(np.mean(P_inst[nequi:]),1)) + ' bar during constant energy and volume simulation',
              fontsize=axisfontsize)
 plt.tight_layout()
 plt.show()
