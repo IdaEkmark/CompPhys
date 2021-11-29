@@ -91,7 +91,7 @@ ax2.plot(np.array([t_P[2*nequi],t_P[2*nequi]]), np.array([-3*10000, 2*10000]), '
 ax2.plot(t_P, P_inst)
 ax2.set_xlabel('$t$ (ps)', fontsize=axisfontsize)
 ax2.set_ylabel('$P_\mathrm{instantaneous}$ (bar)', fontsize=axisfontsize)
-ax2.set_ylim([-1.5*10000,2*10000])
+ax2.set_ylim([-0.5*10000,2*10000])
 ax2.grid()
 
 ax2.legend(['Equilibration with $T=1000$ K', 'Equilibration with $T=700$ K'], loc='upper right', fontsize=axisfontsize)
