@@ -20,7 +20,8 @@
 
 #define N_ATOMS 256
 #define K_B 8.6e-5
-#define KAPPA_T 2.216
+#define KAPPA_T_500 2.216
+#define KAPPA_T_700 2.260
 #define PI 3.141592653589
 #define REAL(z,i) ((z)[2*(i)])
 #define IMAG(z,i) ((z)[2*(i)+1])
@@ -165,7 +166,7 @@ double getInstantaneousTemperature(double momentum[][3], int n_particles, double
 double getInstantaneousPressure(double positions[][3], double momentum[][3], int n_particles, double cell_length, double mass){
 	double E_kin = get_E_kin(momentum, n_particles, mass);
 	double virial = get_virial_AL(positions, cell_length, n_particles);
-	double P_inst = (2 * E_kin + virial)/(3.0 * cell_length * cell_length * cell_length);
+	double P_inst = (2 * E_kin/3.0 + virial)/(cell_length * cell_length * cell_length);
 	return P_inst;
 }
 
@@ -220,7 +221,11 @@ double velocity_verlet_equi(int n_timesteps, int n_particles, double a0, double 
         alpha_T = 1 + 2 * dt * tau_T_inv * ( T_eq - T_inst ) / T_inst; 
         
         P_inst = getInstantaneousPressure(q, p, n_particles, N*a0, mass);
-        alpha_P = 1.0 - KAPPA_T * dt * tau_P_inv * ( P_eq - P_inst );
+        if (T_eq < 600 + 273.15){
+        	alpha_P = 1.0 - KAPPA_T_500 * dt * tau_P_inv * ( P_eq - P_inst );
+        } else {
+        	alpha_P = 1.0 - KAPPA_T_700 * dt * tau_P_inv * ( P_eq - P_inst );
+        }
         
         for (i = 0; i < n_particles; i++) {
         	for (j = 0; j < 3; j++) {
@@ -383,7 +388,7 @@ void powerspectrum(double *data, double *powspec, int n, double dt, double *omeg
 		omegas[i] = omega;
 		powspec[i] = 0;
 		for(int j = 0; j < n; j++) {
-			powspec[i] += data[j] * cos(omega * data[j]); 
+			powspec[i] += data[j] * cos(omega * j * dt); 
 		}
 		powspec[i] *= 2*dt;
 		omega += domega;
@@ -411,7 +416,8 @@ void runTask1() {
 }
 
 void runTask2(double dt) {
-	double a0 = 4.03; int N = 4; int n_t = 10000; int natoms = N_ATOMS; double mass = 27.0 / 9649.0;
+	double t_max = 20; int n_t = (int) t_max/dt;
+	double a0 = 4.03; int N = 4; int natoms = N_ATOMS; double mass = 27.0 / 9649.0;
 	double (*positions)[natoms][3]; double (*momenta)[natoms][3]; double standardpositions[natoms][3];
 	double *E_pot; double *E_kin; double *time;
 	int i; int j; int t;
@@ -547,7 +553,7 @@ void runTask4() {
 	int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS; int n_p_skip = 85; int n_t_skip = 1;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi; double *a0_equi2;
 	double *temperature; double *pressure; double *time;  double *timeTP; double *timeA0;
-	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 3.12e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 4.16e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j; int t;
 
 	positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
@@ -715,7 +721,7 @@ void runTask5(char phase) {
 		double a0 = 4.03; double mass = 27.0 / 9649.0;
 		int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS; 
 		double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
-		double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 3.12e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+		double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 4.16e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 		int i; int j;
 	
 		positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
@@ -790,7 +796,7 @@ void runTask5(char phase) {
 
 void runTask6(char alg) {// As task 4
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
-	int N = 4; int n_t_equi = 20000; int n_t = 100000; double dt = 5e-4; int natoms = N_ATOMS; 
+	int N = 4; int n_t_equi = 20000; int n_t = 80000; double dt = 1e-3; int natoms = N_ATOMS; 
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
 	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 3.12e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
@@ -847,7 +853,7 @@ void runTask6(char alg) {// As task 4
 	double *VCF; 
 					
 	if (alg == 's') { 
-		int vcf_intervall = 20000; double *time;
+		int vcf_intervall = 10000; double *time;
 		
 		VCF = malloc((n_t+1-vcf_intervall) * sizeof(double));
 		
@@ -855,7 +861,7 @@ void runTask6(char alg) {// As task 4
 		time = malloc((n_t+1-vcf_intervall) * sizeof(double));
 		arange(time, 0.0, n_t+1-vcf_intervall, dt);
 		
-		saveDataToFile("6/VCF_dt0.0005_standard.csv", VCF, time,  n_t+1-vcf_intervall, 10);
+		saveDataToFile("6/VCF_dt0.001_standard.csv", VCF, time,  n_t+1-vcf_intervall, 10);
 		free(VCF);
 		free(time);
 	}
@@ -868,7 +874,7 @@ void runTask6(char alg) {// As task 4
 		time = malloc((vcf_intervall) * sizeof(double));
 		arange(time, 0.0, vcf_intervall, dt);
 		
-		saveDataToFile("6/VCF_dt0.0005_fast.csv", VCF, time,  vcf_intervall, 1);
+		saveDataToFile("6/VCF_dt0.001_fast.csv", VCF, time,  vcf_intervall, 1);
 		free(VCF);
 		free(time);
 	}
@@ -885,7 +891,7 @@ void runTask7() {
 	double a0 = 4.03; double mass = 27.0 / 9649.0;
 	int N = 4; int n_t_equi = 20000; int n_t = 50000; double dt = 1e-3; int natoms = N_ATOMS;
 	double (*positions_equi)[natoms][3]; double (*momenta_equi)[natoms][3]; double *a0_equi;
-	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 3.12e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
+	double T_eq_init = 1000 + 273.15; double T_eq = 700 + 273.15; double P_eq_init = 4.16e-3; double P_eq = 6.24e-7; double tau_T = 400 * dt; double tau_P = 400 * dt;
 	int i; int j;
 
 	positions_equi = malloc((n_t_equi+1) * sizeof *positions_equi);
@@ -944,7 +950,7 @@ void runTask7() {
 	
 	evalVelocityCorrelationFast(n_t, natoms, momenta, mass, VCF, vcf_intervall);
 	
-	double *omegas; double *powspec; int n_omegas = 20000; double domega = 0.001;
+	double *omegas; double *powspec; int n_omegas = 200000; double domega = 0.001;
 	omegas = malloc((n_omegas) * sizeof(double));
 	powspec = malloc((n_omegas) * sizeof(double));
 	
@@ -961,17 +967,17 @@ void runTask7() {
 /* Main program */
 int main()
 {
-	//runTask1();
-	//runTask2(0.001);
-	//runTask2(0.01);
-	//runTask2(0.02);
+	runTask1();
+	runTask2(0.001);
+	runTask2(0.01);
+	runTask2(0.02);
 	runTask3();
-	//runTask4();
-	//runTask5('s');
-	//runTask5('l');
-	//runTask6('s');
-	//runTask6('f');
-	//runTask7();
+	runTask4();
+	runTask5('s');
+	runTask5('l');
+	runTask6('s');
+	runTask6('f');
+	runTask7();
 	
 	return 0;   
 }

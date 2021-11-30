@@ -28,7 +28,7 @@ array = np.genfromtxt(folder + filename + '.csv', delimiter=',', skip_header=1)
 t = array[:, 0]
 MSD = array[:, 1]
 
-Ds = np.mean(MSD[-100:]/(6*t[-100:]))
+Ds = np.mean(MSD[-40000:]/(6*t[-40000:]))
 
 fig, ax = plt.subplots(figsize=(7,5))
 ax.plot(t, MSD)

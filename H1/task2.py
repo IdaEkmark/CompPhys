@@ -165,7 +165,7 @@ fig.supylabel('$E$ (eV)', fontsize=axisfontsize)
 ax.grid()
 ax2.grid()
 ax.legend(loc='upper left', fontsize=axisfontsize)
-plt.suptitle('$T=$' + str((round(T/1e10,1))) + '$\cdot 10^{10}$ K, $dt=$' + str(dt) + ' ps', fontsize=axisfontsize)
+plt.suptitle('$T=$' + str((round(T/1e9,1))) + '$\cdot 10^{9}$ K, $dt=$' + str(dt) + ' ps', fontsize=axisfontsize)
 
 plt.tight_layout()
 fig.savefig(folder + filename + '.pdf')

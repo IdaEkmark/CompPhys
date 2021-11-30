@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 axisfontsize = 14
-dt = 5e-4
+dt = 1e-3
 folder = "6/"
 filename = "VCF_dt" + str(dt) + '_standard'
 
