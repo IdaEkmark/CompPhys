@@ -53,7 +53,7 @@ double evalDensityNormalization(double alpha, int N_norm, double d, gsl_rng * r)
 	return I;
 }
 
-double evalDensityFunction(double *R, double alpha, double densityNorm) {
+double evalDensityFun(double *R, double alpha, double densityNorm) {
 	double psi = evalWaveFun(R, alpha);
 	double rho = psi * psi / densityNorm;
 	return rho;
@@ -63,7 +63,7 @@ double metropolis(double d, gsl_rng * r, double alpha, int N, int N_norm) {
 	double R_m[6] = {0, 0, 0, 0, 0, 0}; double R_t[6];
 	double densityNorm = evalDensityNormalization(alpha, N_norm, d, r);
 	
-	double p_m = evalDensityFunction(R_m, alpha, densityNorm); double p_t;
+	double p_m = evalDensityFun(R_m, alpha, densityNorm); double p_t;
 	/*
 	double I = 0; double normfactor = 1/(N * fraction_use);
 	int counter = 0;
