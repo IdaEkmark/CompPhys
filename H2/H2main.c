@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <gsl/gsl_rng.h>
 
 void getNewConfig(double *r, double d, gsl_rng * r) {
 	int coodinate = floor(gsl_rng_uniform(r)*6);
