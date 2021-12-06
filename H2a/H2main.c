@@ -403,7 +403,76 @@ double evalShortRangeOrder(int (*neighbourMatrix)[8], int nAtoms){
 	return 1/(4.0*N)*(q - 4.0*N);
 }
 
-void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq, double E_AA, double E_BB, double E_AB, gsl_rng * r, double *UCPr){
+void evalMeanedA(double *a, double *a_meaned, int n){
+	double a_mean=0;
+	for (int i=0; i<n; i++) {
+		a_mean += a[i];
+	}
+	a_mean /= (double) n;
+	for (int i=0; i<n; i++){
+		a_meaned[i] = a[i] - a_mean;
+	}
+}
+
+double evalCorrelationFunction(double f[], int k, int N) {
+	double f_mean2 = 0; double f2_mean = 0; double f_corr_mean = 0;
+	int i;
+	for (i = 0; i < N ; i++) {
+		f_mean2 += f[i];
+		f2_mean += f[i]*f[i];
+	}
+	f_mean2 = f_mean2 * f_mean2 /((double) N * N);
+	f2_mean /= (double) N;
+	for (i = 0; i < N-k; i++) {
+		f_corr_mean += f[i]*f[i+k];
+	}
+	f_corr_mean /= (double) (N - k);
+	
+	return (f_corr_mean - f_mean2)/(f2_mean - f_mean2);
+}
+
+int evalStatisticalInefficiency(double f[], int N) {
+	int k = 0; double phi = 100;
+	while (phi > 0.135 || k > 1000) {
+		k++; 
+		phi = evalCorrelationFunction(f, k, N);
+	}
+	return k;
+}
+
+void evalBlockVariables(double f[], double F[], int N, int N_B, int B) {
+	for (int j = 0; j < N_B; j++) {
+		F[j] = 0;
+		for (int i = 0; i < B; i++) {
+			F[j] += f[i + j*B];
+		}
+		F[j] /= (double) B;
+	}
+}
+
+double evalVariance(double a[], int n) {
+	double a_mean2=0; double a2_mean=0;
+	for (int i=0; i<n; i++) {
+		a_mean2 += a[i];
+		a2_mean += a[i]*a[i];
+	}
+	a_mean2 /= (double) n;
+	a_mean2 = a_mean2 * a_mean2;
+	a2_mean /= (double) n;
+	return a2_mean - a_mean2;
+}
+
+double evalStatisticalInefficiencyBlockAtB(double f[], int N, int B) {
+	int N_B = N / B; double *F; 
+	F = malloc(N_B * sizeof(double));
+	evalBlockVariables(f, F, N, N_B, B);
+	double varf = evalVariance(f, N);
+	double varF = evalVariance(F, N_B);
+	double s = B * varF / varf;
+	return s;
+}
+
+void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq, double E_AA, double E_BB, double E_AB, gsl_rng * r, double *UCPr, double *se){
 	int (*neighbourMatrix_m)[8]; int (*neighbourMatrix_t)[8];
 	int *sc1_m; int *sc2_m; int *sc1_t; int *sc2_t;
 	
@@ -420,6 +489,15 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	double beta = 1/(K_B * T);
 	
 	double meanE=0; double meanE2=0; double meanP=0; double meanr=0;
+	
+	double *E_m_vec; double *P_vec; double *r_vec; double *E_m_vec_meaned; double *P_vec_meaned; double *r_vec_meaned;
+	
+	E_m_vec = malloc((N_tot - N_eq) * sizeof(int));
+	P_vec = malloc((N_tot - N_eq) * sizeof(int));
+	r_vec = malloc((N_tot - N_eq) * sizeof(int));
+	E_m_vec_meaned = malloc((N_tot - N_eq) * sizeof(int));
+	P_vec_meaned = malloc((N_tot - N_eq) * sizeof(int));
+	r_vec_meaned = malloc((N_tot - N_eq) * sizeof(int));
 	
 	int t; int i; int j;
 	for (t=0; t<N_tot; t++) {
@@ -439,23 +517,46 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 			}
 			E_m = E_t;
 		}
-		if ( t > N_eq ) {
+		if ( t >= N_eq ) {
 			meanE += E_m;
 			meanE2 += E_m * E_m;
-			meanP += fabs(evalLongRangeOrder(sc1_m, nAtoms));
-			meanr += fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms));
+			E_m_vec[t-N_eq] = E_m;
+			P_vec[t-Neq] = fabs(evalLongRangeOrder(sc1_m, nAtoms)); 
+			r_vec[t-Neq] = fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms)); 
+			meanP += P_vec[t-Neq];
+			meanr += r_vec[t-Neq];
 		}
 	}
 	meanE /= ((double) N_tot - N_eq);
 	meanE2 /= ((double) N_tot - N_eq); 
 	meanP  /= ((double) N_tot - N_eq);
 	meanr  /= ((double) N_tot - N_eq);
+	
+	evalMeanedA(U, E_m_meaned, N);
+	evalMeanedA(U, P_meaned, N);
+	evalMeanedA(U, r_meaned, N);
+	
 	UCPr[0] = meanE;
 	UCPr[1] = (meanE2 - meanE*meanE) / (beta*beta) * K_B;
 	UCPr[2] = fabs(evalLongRangeOrder(sc1_m, nAtoms));
 	UCPr[3] = fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms));
 	UCPr[4] = meanP;
 	UCPr[5] = meanr;
+
+	int s_E_m_corr = evalStatisticalInefficiency(E_m_meaned, N_tot - N_eq);
+	int s_P_corr = evalStatisticalInefficiency(P_meaned, N_tot - N_eq);
+	int s_r_corr = evalStatisticalInefficiency(r_meaned, N_tot - N_eq);
+	
+	int s_E_m_block = evalStatisticalInefficiencyBlockAtB(E_m_meaned, N_tot - N_eq, 2000);
+	int s_P_block = evalStatisticalInefficiencyBlockAtB(P_meaned, N_tot - N_eq, 2000);
+	int s_r_block = evalStatisticalInefficiencyBlockAtB(r_meaned, N_tot - N_eq, 2000);
+	
+	se[0] = s_E_m_corr;
+	se[1] = s_E_m_block;
+	se[2] = s_P_corr;
+	se[3] = s_P_block;
+	se[4] = s_r_corr;
+	se[5] = s_r_block;
 	
 	free(neighbourMatrix_m);
 	free(neighbourMatrix_t);
@@ -463,6 +564,12 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	free(sc2_m);
 	free(sc1_t);
 	free(sc2_t);
+	free(E_m_vec);
+	free(P_vec);
+	free(r_vec);
+	free(E_m_vec_meaned);
+	free(P_vec_meaned);
+	free(r_vec_meaned);
 }
 
 void runTask2Metropolis() {
@@ -473,8 +580,9 @@ void runTask2Metropolis() {
 	
 	
 	int N = 1000000; int N_eq = 750000; int N_tot = N_eq + N;
-	double T = -200+273.15; double deltaT = 2; int nT = 501; double *UCPr; 
+	double T = -200+273.15; double deltaT = 2; int nT = 501; double *UCPr; double *se;
 	double *T_vec; double *U_vec; double *C_vec; double *P_vec; double *r_vec; double *P_mean_vec; double *r_mean_vec;
+	double *s_E_m_corr_vec; double *s_E_m_block_vec; double *s_P_corr_vec; double *s_P_block_vec; double *s_r_corr_vec; double *s_r_block_vec;
 	
 	int t;
 	UCPr = malloc(6 * sizeof(double));
@@ -486,15 +594,31 @@ void runTask2Metropolis() {
 	P_mean_vec = malloc(nT * sizeof(double));
 	r_mean_vec = malloc(nT * sizeof(double));
 	
+	se = malloc(6 * sizeof(double));
+	s_E_m_corr_vec = malloc(nT * sizeof(double));
+	s_E_m_block_vec = malloc(nT * sizeof(double));
+	s_P_corr_vec = malloc(nT * sizeof(double));
+	s_P_block_vec = malloc(nT * sizeof(double));
+	s_r_corr_vec = malloc(nT * sizeof(double));
+	s_r_block_vec = malloc(nT * sizeof(double));
+	
+	
 	for (t=0; t<nT; t++){
 		T_vec[t] = T - 273.15;
-		metropolis(T, nAtoms, nUnitCellLengths, N_tot, N_eq, E_CuCu, E_ZnZn, E_CuZn, r, UCPr);
+		metropolis(T, nAtoms, nUnitCellLengths, N_tot, N_eq, E_CuCu, E_ZnZn, E_CuZn, r, UCPr, se);
 		U_vec[t] = UCPr[0];
 		C_vec[t] = UCPr[1];
 		P_vec[t] = UCPr[2];
 		r_vec[t] = UCPr[3];
 		P_mean_vec[t] = UCPr[4];
 		r_mean_vec[t] = UCPr[5];
+		
+		s_E_m_corr_vec[t] = se[0];
+		s_E_m_block_vec[t] = se[1];
+		s_P_corr_vec[t] = se[2];
+		s_P_block_vec[t] = se[3];
+		s_r_corr_vec[t] = se[4];
+		s_r_block_vec[t] = se[5];
 		T += deltaT;
 	}
 	
@@ -504,7 +628,16 @@ void runTask2Metropolis() {
 	saveDataToFile("2/Tr.csv", r_vec, T_vec, nT, 1);
 	saveDataToFile("2/TPmean.csv", P_mean_vec, T_vec, nT, 1);
 	saveDataToFile("2/Trmean.csv", r_mean_vec, T_vec, nT, 1);
+	
+	saveDataToFile("2/s_E_m_corr.csv", s_E_m_corr_vec, T_vec, nT, 1);
+	saveDataToFile("2/s_E_m_block.csv", s_E_m_block_vec, T_vec, nT, 1);
+	saveDataToFile("2/s_P_corr.csv", s_P_corr_vec, T_vec, nT, 1);
+	saveDataToFile("2/s_P_block.csv", s_P_block_vec, T_vec, nT, 1);
+	saveDataToFile("2/s_r_corr.csv", s_r_corr_vec, T_vec, nT, 1);
+	saveDataToFile("2/s_r_block.csv", s_r_block_vec, T_vec, nT, 1);
+	
 	free(UCPr);
+	free(se);
 	free(T_vec);
 	free(U_vec);
 	free(C_vec);
@@ -544,47 +677,10 @@ void runTask2Metropolis() {
 	free(sc2_t);*/
 }
 /*
-void evalMeanedA(double *a, double *a_meaned, int n){
-	double a_mean=0;
-	for (int i=0; i<n; i++) {
-		a_mean += a[i];
-	}
-	a_mean /= (double) n;
-	for (int i=0; i<n; i++){
-		a_meaned[i] = a[i] - a_mean;
-	}
-}
-
-double evalCorrelationFunction(double f[], int k, int N) {
-	double f_mean2 = 0; double f2_mean = 0; double f_corr_mean = 0;
-	int i;
-	for (i = 0; i < N ; i++) {
-		f_mean2 += f[i];
-		f2_mean += f[i]*f[i];
-	}
-	f_mean2 = f_mean2 * f_mean2 /((double) N * N);
-	f2_mean /= (double) N;
-	for (i = 0; i < N-k; i++) {
-		f_corr_mean += f[i]*f[i+k];
-	}
-	f_corr_mean /= (double) (N - k);
-	
-	return (f_corr_mean - f_mean2)/(f2_mean - f_mean2);
-}
-
-int evalStatisticalInefficiency(double f[], int N, double phi_vec[]) {
-	int k = 0; double phi = 100;
-	while (phi > 0.135 || k > 1000) {
-		k++; 
-		phi = evalCorrelationFunction(f, k, N);
-		phi_vec[k-1] = phi;
-	}
-	return k;
-}
 
 void task2StatisticalInefficiency() {
-	int N = 1401; int N_max = 1000; double *T; double s_vec[N_max]; double B_vec[N_max]; double phi_vec[N_max];
-	double *U; double *U_meaned; 
+	//int N = 1401; int N_max = 1000; double *T; double s_vec[N_max]; double B_vec[N_max]; double phi_vec[N_max];
+	//double *U; double *U_meaned; 
 	T = malloc((N) * sizeof(double));
 	U = malloc((N) * sizeof(double));
 	U_meaned = malloc((N) * sizeof(double));
