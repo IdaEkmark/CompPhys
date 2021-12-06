@@ -34,7 +34,7 @@ ax2.set_ylabel('$r$', fontsize=axisfontsize)
 ax2.grid()
 
 plt.show()
-filename = 'TPr'
+filename = 'TPrmean'
 fig.savefig('2/' + filename + '.pdf')
 
 filename = "TP"

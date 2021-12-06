@@ -112,7 +112,7 @@ void runTask1() {
 	double E_CuCu = -436e-3; double E_ZnZn = -113e-3; double E_CuZn = -294e-3;
 	
 	int N = 1000; double tol = 1e-6;
-	double T = -100+273; double deltaT = 2; int nT = 451; 
+	double T = -200+273; double deltaT = 5; int nT = 201; 
 	double *T_vec; double *P_vec; double *U_vec;
 	
 	T_vec = malloc( nT * sizeof(double));
@@ -491,13 +491,14 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	double meanE=0; double meanE2=0; double meanP=0; double meanr=0;
 	
 	double *E_m_vec; double *P_vec; double *r_vec; double *E_m_vec_meaned; double *P_vec_meaned; double *r_vec_meaned;
+	double P; double rr;
 	
-	E_m_vec = malloc((N_tot - N_eq) * sizeof(int));
-	P_vec = malloc((N_tot - N_eq) * sizeof(int));
-	r_vec = malloc((N_tot - N_eq) * sizeof(int));
-	E_m_vec_meaned = malloc((N_tot - N_eq) * sizeof(int));
-	P_vec_meaned = malloc((N_tot - N_eq) * sizeof(int));
-	r_vec_meaned = malloc((N_tot - N_eq) * sizeof(int));
+	E_m_vec = malloc((N_tot - N_eq) * sizeof(double));
+	P_vec = malloc((N_tot - N_eq) * sizeof(double));
+	r_vec = malloc((N_tot - N_eq) * sizeof(double));
+	E_m_vec_meaned = malloc((N_tot - N_eq) * sizeof(double));
+	P_vec_meaned = malloc((N_tot - N_eq) * sizeof(double));
+	r_vec_meaned = malloc((N_tot - N_eq) * sizeof(double));
 	
 	int t; int i; int j;
 	for (t=0; t<N_tot; t++) {
@@ -521,10 +522,12 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 			meanE += E_m;
 			meanE2 += E_m * E_m;
 			E_m_vec[t-N_eq] = E_m;
-			P_vec[t-Neq] = fabs(evalLongRangeOrder(sc1_m, nAtoms)); 
-			r_vec[t-Neq] = fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms)); 
-			meanP += P_vec[t-Neq];
-			meanr += r_vec[t-Neq];
+			P = fabs(evalLongRangeOrder(sc1_m, nAtoms));
+			P_vec[t-N_eq] = P;
+			rr = fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms));
+			r_vec[t-N_eq] = rr;
+			meanP += P;
+			meanr += rr;
 		}
 	}
 	meanE /= ((double) N_tot - N_eq);
@@ -532,24 +535,24 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	meanP  /= ((double) N_tot - N_eq);
 	meanr  /= ((double) N_tot - N_eq);
 	
-	evalMeanedA(U, E_m_meaned, N);
-	evalMeanedA(U, P_meaned, N);
-	evalMeanedA(U, r_meaned, N);
-	
 	UCPr[0] = meanE;
-	UCPr[1] = (meanE2 - meanE*meanE) / (beta*beta) * K_B;
+	UCPr[1] = (meanE2 - meanE*meanE) * (beta*beta) * K_B;
 	UCPr[2] = fabs(evalLongRangeOrder(sc1_m, nAtoms));
 	UCPr[3] = fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms));
 	UCPr[4] = meanP;
 	UCPr[5] = meanr;
-
-	int s_E_m_corr = evalStatisticalInefficiency(E_m_meaned, N_tot - N_eq);
-	int s_P_corr = evalStatisticalInefficiency(P_meaned, N_tot - N_eq);
-	int s_r_corr = evalStatisticalInefficiency(r_meaned, N_tot - N_eq);
 	
-	int s_E_m_block = evalStatisticalInefficiencyBlockAtB(E_m_meaned, N_tot - N_eq, 2000);
-	int s_P_block = evalStatisticalInefficiencyBlockAtB(P_meaned, N_tot - N_eq, 2000);
-	int s_r_block = evalStatisticalInefficiencyBlockAtB(r_meaned, N_tot - N_eq, 2000);
+	evalMeanedA(E_m_vec, E_m_vec_meaned, N_tot - N_eq);
+	evalMeanedA(P_vec, P_vec_meaned, N_tot - N_eq);
+	evalMeanedA(r_vec, r_vec_meaned, N_tot - N_eq);
+
+	int s_E_m_corr = evalStatisticalInefficiency(E_m_vec_meaned, N_tot - N_eq);
+	int s_P_corr = evalStatisticalInefficiency(P_vec_meaned, N_tot - N_eq);
+	int s_r_corr = evalStatisticalInefficiency(r_vec_meaned, N_tot - N_eq);
+	
+	int s_E_m_block = evalStatisticalInefficiencyBlockAtB(E_m_vec_meaned, N_tot - N_eq, 2000);
+	int s_P_block = evalStatisticalInefficiencyBlockAtB(P_vec_meaned, N_tot - N_eq, 2000);
+	int s_r_block = evalStatisticalInefficiencyBlockAtB(r_vec_meaned, N_tot - N_eq, 2000);
 	
 	se[0] = s_E_m_corr;
 	se[1] = s_E_m_block;
@@ -572,15 +575,15 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	free(r_vec_meaned);
 }
 
-void runTask2Metropolis() {
+void runTask2() {
 	double E_CuCu = -436e-3; double E_ZnZn = -113e-3; double E_CuZn = -294e-3;
 	int nUnitCellLengths = 10; int nAtoms = 2 * nUnitCellLengths * nUnitCellLengths* nUnitCellLengths; 
 	gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937); 
 	gsl_rng_set(r, 34);
 	
 	
-	int N = 1000000; int N_eq = 750000; int N_tot = N_eq + N;
-	double T = -200+273.15; double deltaT = 2; int nT = 501; double *UCPr; double *se;
+	int N = 1000000; int N_eq = 500000; int N_tot = N_eq + N;
+	double T = -200+273.15; double deltaT = 5; int nT = 201; double *UCPr; double *se;
 	double *T_vec; double *U_vec; double *C_vec; double *P_vec; double *r_vec; double *P_mean_vec; double *r_mean_vec;
 	double *s_E_m_corr_vec; double *s_E_m_block_vec; double *s_P_corr_vec; double *s_P_block_vec; double *s_r_corr_vec; double *s_r_block_vec;
 	
@@ -702,7 +705,7 @@ void task2StatisticalInefficiency() {
 */
 int main() {
 	//runTask1();
-	runTask2Metropolis();
+	runTask2();
 	
 	return 0;
 }
