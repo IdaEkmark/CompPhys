@@ -131,7 +131,7 @@ void read_data(char *fname, double *time_array, double *signal, int startind, in
 }
 
 void runtask1() {
-    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 5e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
+    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 4e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
     double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
     double r = 2.79e-6/2; double rho = 2.65e3; double m = (4.0/3.0 * PI * pow(r,3)) * rho; double T = 297.0; double x0 = 0; double v0 = 0; 
     double *X1; double *V1; double *X2; double *V2; double *X3; double *V3; double *X4; double *V4; double *time;
@@ -161,7 +161,7 @@ void runtask1() {
     brownian_verlet(nt2, eta_high, T, m, omega0, X4, V4, dt2);
 
     time = malloc((nt1+1) * sizeof(double));
-	arange(time, -3e-3, nt1+1, dt1);
+	arange(time, -2e-3, nt1+1, dt1);
 
     saveDataToFile("1/position_tau147.3e-6_dt5e-6.csv", X1, time, nt1+1, 1);
     saveDataToFile("1/velocity_tau147.3e-6_dt5e-6.csv", V1, time, nt1+1, 1);
@@ -170,7 +170,7 @@ void runtask1() {
 
     free(time);
     time = malloc((nt2+1) * sizeof(double));
-	arange(time, -3e-3, nt2+1, dt2);
+	arange(time, -2e-3, nt2+1, dt2);
 
     saveDataToFile("1/position_tau147.3e-6_dt1e-6.csv", X3, time, nt2+1, 1);
     saveDataToFile("1/velocity_tau147.3e-6_dt1e-6.csv", V3, time, nt2+1, 1);
@@ -189,20 +189,20 @@ void runtask1() {
     free(V4);
 }
 
-void runtask2() {
+void runtask2a() {
     int ntNew = 41; double dtau = 50e-6;
     double time_array[ntNew];
     double vDataLow50[ntNew];
     double vDataHigh50[ntNew];
-    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow50, 3000, 50);
-    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh50, 3000, 50);
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow50, 2000, 50);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh50, 2000, 50);
 
     /*
      * Construct array with frequencies
      */ 
     double frequencies[ntNew];
     for(int i = 0; i < ntNew; i++){
-	    frequencies[i] = i / (dtau * ntNew) - 1.0 / (2.0 * dtau);
+	    frequencies[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
     }
 
     /*
@@ -221,15 +221,15 @@ void runtask2() {
     double time_array2[ntNew];
     double vDataLow25[ntNew];
     double vDataHigh25[ntNew];
-    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array2, vDataLow25, 3000, 25);
-    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array2, vDataHigh25, 3000, 25);
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array2, vDataLow25, 2000, 25);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array2, vDataHigh25, 2000, 25);
 
     /*
      * Construct array with frequencies
      */ 
     double frequencies2[ntNew];
     for(int i = 0; i < ntNew; i++){
-	    frequencies2[i] = i / (dtau * ntNew) - 1.0 / (2.0 * dtau);
+	    frequencies2[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
     }
 
     /*
@@ -245,9 +245,72 @@ void runtask2() {
     saveDataToFile("2/power_48.5e-6_dtau25dt.csv", fftd_dataHigh25, frequencies2, ntNew, 1);
 }
 
+void runtask2b() {
+    double dt = 1e-6; double t_max = 10e-3; int nt = (int) (t_max/dt);
+    double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
+    double r = 2.79e-6/2; double rho = 2.65e3; double m = (4.0/3.0 * PI * pow(r,3)) * rho; double T = 297.0; double x0 = 0; double v0 = 0; 
+    double *X1; double *V1; double *X2; double *V2; double *time;
+
+    X1 = malloc(nt * sizeof(double));
+    V1 = malloc(nt * sizeof(double));
+    X2 = malloc(nt * sizeof(double));
+    V2 = malloc(nt * sizeof(double));
+
+    X1[0] = x0;
+    V1[0] = v0;
+    X2[0] = x0;
+    V2[0] = v0;
+
+    brownian_verlet(nt, eta_low, T, m, omega0, X1, V1, dt);
+    brownian_verlet(nt, eta_high, T, m, omega0, X2, V2, dt);
+
+    time = malloc((nt+1) * sizeof(double));
+	arange(time, -3e-3, nt+1, dt);
+
+    saveDataToFile("2/position_tau147.3e-6_dt1e-6_Long.csv", X1, time, nt+1, 1);
+    saveDataToFile("2/velocity_tau147.3e-6_dt1e-6_Long.csv", V1, time, nt+1, 1);
+    saveDataToFile("2/position_tau48.5e-6_dt1e-6_Long.csv", X2, time, nt+1, 1);
+    saveDataToFile("2/velocity_tau48.5e-6_dt1e-6_Long.csv", V2, time, nt+1, 1);
+
+    // Compute 4 different power spectra
+    int ntNew = 321; double dtau = 25e-6; int startind = 2000;
+    double vDataLow25[ntNew];
+    double vDataHigh25[ntNew];
+
+    for (int i=0; i<ntNew; i++) {
+        vDataLow25[i] = V1[startind + 25*i];
+        vDataLow25[i] = V1[startind + 25*i];
+    }
+
+    /*
+     * Construct array with frequencies
+     */
+    double frequencies[ntNew];
+    for(int i = 0; i < ntNew; i++){
+	    frequencies[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
+    }
+
+    /*
+     * Do the fft
+     */
+    double fftd_dataLow25[ntNew]; double fftd_dataHigh25[ntNew];
+    powerspectrum(vDataLow25, fftd_dataLow25, ntNew);
+    powerspectrum_shift(fftd_dataLow25, ntNew);
+    powerspectrum(vDataHigh25, fftd_dataHigh25, ntNew);
+    powerspectrum_shift(fftd_dataHigh25, ntNew);
+
+    free(time);
+
+    free(X1);
+    free(V1);
+    free(X2);
+    free(V2);
+}
+
 int main() {
-    //runtask1();
-    runtask2();
+    runtask1();
+    runtask2a();
+    //runtask2b();
 
     return 0;
 }
