@@ -22,5 +22,5 @@ for dtau, c in zip(dtau_list, color):
         ax[i].set_title('$\\tau = $' + str(tau*1e6) + ' $\mu$s')
         ax[i].set_xlim([0,10e3])
         i += 1
-fig.savefig('2/power.pdf')
+fig.savefig('2/powerAvg.pdf')
 plt.show()

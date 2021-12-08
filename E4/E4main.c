@@ -260,7 +260,7 @@ void runtask2a() {
 }
 
 void runtask2b() {
-    double dt = 1e-6; double t_max = 10e-3; int nt = (int) (t_max/dt);
+    double dt = 1e-6; double t_max = 102e-3; int nt = (int) (t_max/dt);
     double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
     double r = 2.79e-6/2; double rho = 2.65e3; double m = (4.0/3.0 * PI * pow(r,3)) * rho; double T = 297.0; double x0 = 0; double v0 = 0; 
     double *X1; double *V1; double *X2; double *V2; double *time;
@@ -295,6 +295,10 @@ void runtask2b() {
     int ntNew = 81; double dtau = 25e-6; int startind = 2000;
     double vDataLow25[ntNew]; double vDataHigh25[ntNew];
     double fftd_dataLow25Avg[ntNew]; double fftd_dataHigh25Avg[ntNew];
+    for (int i=0; i<ntNew; i++) {
+        fftd_dataLow25Avg[i] = 0;
+        fftd_dataHigh25Avg[i] = 0;
+    }
 
     /*
     * Construct array with frequencies
@@ -305,10 +309,10 @@ void runtask2b() {
     }
 
     // Compute 4 different power spectra
-    for (int j = 1; j <= 4; j++) {
+    for (int j = 1; j <= 50; j++) {
         for (int i=0; i<ntNew; i++) {
             vDataLow25[i] = V1[j*startind + 25*i];
-            vDataHigh25[i] = V1[j*startind + 25*i];
+            vDataHigh25[i] = V2[j*startind + 25*i];
         }
 
         /*
@@ -327,8 +331,8 @@ void runtask2b() {
     }
 
     for (int i=0; i<ntNew; i++) {
-        fftd_dataLow25Avg[i] /= 4;
-        fftd_dataHigh25Avg[i] /= 4;
+        fftd_dataLow25Avg[i] /= 50;
+        fftd_dataHigh25Avg[i] /= 50;
     }
 
     saveDataToFile("2/power_147.3e-6_dtau25dt_Long.csv", fftd_dataLow25Avg, frequencies, ntNew, 1);
