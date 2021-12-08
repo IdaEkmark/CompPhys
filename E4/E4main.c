@@ -29,7 +29,7 @@ void arange(double *array, double start, int len_t, double dt){
  * @kappa - Spring constant
  */
 void brownian_verlet(int n_timesteps, double eta, double temperature, double mass, double omega0, double (*pos), double (*vel),
-		double dt)
+		double dt, gsl_rng * r)
 {
     double q;
     double v;
@@ -38,7 +38,6 @@ void brownian_verlet(int n_timesteps, double eta, double temperature, double mas
     double c0 = exp(-eta*dt);
     double v_th = sqrt(K_B * temperature / mass);
 
-    gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937);
     double gaussian_r;
     
     q = pos[0];
@@ -130,6 +129,19 @@ void read_data(char *fname, double *time_array, double *signal, int startind, in
     fclose(fp);
 }
 
+void evalVelocityCorrelationStandard(int n_timesteps, double *vel, double *vcf, int vcf_intervall) {
+	double vcf_time;
+	int time = 0;
+	while (time + vcf_intervall < n_timesteps + 1) {
+		vcf_time = 0;
+		for (int time_sum = time + 1; time_sum <= time + vcf_intervall; time_sum++ ) {
+			vcf_time += vel[time_sum] * vel[time_sum - time]/vcf_intervall;
+		}
+		vcf[time] = vcf_time;
+		time++;
+	}
+}
+
 void runtask1() {
     double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 4e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
     double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
@@ -153,12 +165,14 @@ void runtask1() {
     V3[0] = v0;
     X4[0] = x0;
     V4[0] = v0;
+    
+    gsl_rng * rg = gsl_rng_alloc(gsl_rng_mt19937);
 
-    brownian_verlet(nt1, eta_low, T, m, omega0, X1, V1, dt1);
-    brownian_verlet(nt1, eta_high, T, m, omega0, X2, V2, dt1);
+    brownian_verlet(nt1, eta_low, T, m, omega0, X1, V1, dt1, rg);
+    brownian_verlet(nt1, eta_high, T, m, omega0, X2, V2, dt1, rg);
 
-    brownian_verlet(nt2, eta_low, T, m, omega0, X3, V3, dt2);
-    brownian_verlet(nt2, eta_high, T, m, omega0, X4, V4, dt2);
+    brownian_verlet(nt2, eta_low, T, m, omega0, X3, V3, dt2, rg);
+    brownian_verlet(nt2, eta_high, T, m, omega0, X4, V4, dt2, rg);
 
     time = malloc((nt1+1) * sizeof(double));
 	arange(time, -2e-3, nt1+1, dt1);
@@ -260,9 +274,11 @@ void runtask2b() {
     V1[0] = v0;
     X2[0] = x0;
     V2[0] = v0;
-
-    brownian_verlet(nt, eta_low, T, m, omega0, X1, V1, dt);
-    brownian_verlet(nt, eta_high, T, m, omega0, X2, V2, dt);
+    
+    gsl_rng * rg = gsl_rng_alloc(gsl_rng_mt19937);
+    
+    brownian_verlet(nt, eta_low, T, m, omega0, X1, V1, dt, rg);
+    brownian_verlet(nt, eta_high, T, m, omega0, X2, V2, dt, rg);
 
     time = malloc((nt+1) * sizeof(double));
 	arange(time, -3e-3, nt+1, dt);
@@ -326,10 +342,36 @@ void runtask2b() {
     free(V2);
 }
 
+void runtask3(){
+	double dt = 1e-6; double t_max = 8e-3; int nt = (int) (t_max/dt);
+    double vDataLow[nt];
+    double vDataHigh[nt];
+    double time_array[nt];
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow, 2000, 1);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh, 2000, 1);
+    
+    double *VCF_high; double *VCF_low; int vcf_intervall = 5000; double *time;
+    VCF_high = malloc((nt+1-vcf_intervall) * sizeof(double));
+    VCF_low = malloc((nt+1-vcf_intervall) * sizeof(double));
+    time = malloc((nt+1-vcf_intervall) * sizeof(double));
+	arange(time, 0.0, nt+1-vcf_intervall, dt);
+	
+    evalVelocityCorrelationStandard(nt, vDataHigh, VCF_high, vcf_intervall);
+    evalVelocityCorrelationStandard(nt, vDataLow, VCF_low, vcf_intervall);
+    
+    saveDataToFile("3/velcorr_147.3e-6.csv", VCF_low, time, nt+1-vcf_intervall, 1);
+    saveDataToFile("3/velcorr_48.5e-6.csv", VCF_high, time, nt+1-vcf_intervall, 1);
+    
+	free(VCF_high);
+	free(VCF_low);
+	free(time);
+    
+}
+
 int main() {
     //runtask1();
     //runtask2a();
     runtask2b();
-
+	//runtask3();
     return 0;
 }

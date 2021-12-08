@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 dt_list = [5e-6, 1e-6]
-tau_list  = [147.3e-6, 48.5e-6]
+tau_list  = [48.5e-6, 147.3e-6]
 color = ['r', 'k']
 for dt in dt_list:
     i=0
