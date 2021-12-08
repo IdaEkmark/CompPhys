@@ -143,7 +143,7 @@ void evalVelocityCorrelationStandard(int n_timesteps, double *vel, double *vcf, 
 }
 
 void runtask1() {
-    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 4e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
+    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 515e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
     double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
     double r = 2.79e-6/2; double rho = 2.65e3; double m = (4.0/3.0 * PI * pow(r,3)) * rho; double T = 297.0; double x0 = 0; double v0 = 0; 
     double *X1; double *V1; double *X2; double *V2; double *X3; double *V3; double *X4; double *V4; double *time;
@@ -175,7 +175,7 @@ void runtask1() {
     brownian_verlet(nt2, eta_high, T, m, omega0, X4, V4, dt2, rg);
 
     time = malloc((nt1+1) * sizeof(double));
-	arange(time, -2e-3, nt1+1, dt1);
+	arange(time, -5e-3, nt1+1, dt1);
 
     saveDataToFile("1/position_tau147.3e-6_dt5e-6.csv", X1, time, nt1+1, 1);
     saveDataToFile("1/velocity_tau147.3e-6_dt5e-6.csv", V1, time, nt1+1, 1);
@@ -184,7 +184,7 @@ void runtask1() {
 
     free(time);
     time = malloc((nt2+1) * sizeof(double));
-	arange(time, -2e-3, nt2+1, dt2);
+	arange(time, -5e-3, nt2+1, dt2);
 
     saveDataToFile("1/position_tau147.3e-6_dt1e-6.csv", X3, time, nt2+1, 1);
     saveDataToFile("1/velocity_tau147.3e-6_dt1e-6.csv", V3, time, nt2+1, 1);
@@ -204,12 +204,14 @@ void runtask1() {
 }
 
 void runtask2a() {
-    int ntNew = 41; double dtau = 50e-6;
+	double t_max = 110e-3; 
+	
+	double dtau = 50e-6; int ntNew = t_max/dtau; 
     double time_array[ntNew];
     double vDataLow50[ntNew];
     double vDataHigh50[ntNew];
-    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow50, 2000, 50);
-    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh50, 2000, 50);
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow50, 5000, 50);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh50, 5000, 50);
 
     /*
      * Construct array with frequencies
@@ -231,12 +233,12 @@ void runtask2a() {
     saveDataToFile("2/power_147.3e-6_dtau50dt.csv", fftd_dataLow50, frequencies, ntNew, 1);
     saveDataToFile("2/power_48.5e-6_dtau50dt.csv", fftd_dataHigh50, frequencies, ntNew, 1);
 
-    ntNew = 81; dtau = 25e-6;
+    dtau = 25e-6; ntNew = t_max/dtau;
     double time_array2[ntNew];
     double vDataLow25[ntNew];
     double vDataHigh25[ntNew];
-    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array2, vDataLow25, 2000, 25);
-    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array2, vDataHigh25, 2000, 25);
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array2, vDataLow25, 5000, 25);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array2, vDataHigh25, 5000, 25);
 
     /*
      * Construct array with frequencies
@@ -343,14 +345,19 @@ void runtask2b() {
 }
 
 void runtask3(){
-	double dt = 1e-6; double t_max = 8e-3; int nt = (int) (t_max/dt);
-    double vDataLow[nt];
-    double vDataHigh[nt];
-    double time_array[nt];
-    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow, 2000, 1);
-    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh, 2000, 1);
+	double dt = 1e-6; double t_max = 510e-3; int nt = (int) (t_max/dt);
+    double *vDataLow;
+    double *vDataHigh;
+    double *time_array;
     
-    double *VCF_high; double *VCF_low; int vcf_intervall = 5000; double *time;
+    vDataLow = malloc(nt * sizeof(double));
+    vDataHigh = malloc(nt * sizeof(double));
+    time_array = malloc(nt * sizeof(double));
+    
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow, 5000, 1);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh, 5000, 1);
+    
+    double *VCF_high; double *VCF_low; int vcf_intervall = 500000; double *time;
     VCF_high = malloc((nt+1-vcf_intervall) * sizeof(double));
     VCF_low = malloc((nt+1-vcf_intervall) * sizeof(double));
     time = malloc((nt+1-vcf_intervall) * sizeof(double));
@@ -365,13 +372,16 @@ void runtask3(){
 	free(VCF_high);
 	free(VCF_low);
 	free(time);
+	free(vDataHigh);
+	free(vDataLow);
+	free(time_array);
     
 }
 
 int main() {
     //runtask1();
     //runtask2a();
-    runtask2b();
-	//runtask3();
+    //runtask2b();
+	runtask3();
     return 0;
 }
