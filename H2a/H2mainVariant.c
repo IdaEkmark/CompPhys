@@ -133,7 +133,7 @@ void runTask1() {
 	free(U_vec);
 }
 
-void initializeNeighbourMatrix(int nUnitCellLengths, int (*neighbourMatrix)[8], int *sc1, int *sc2){
+void initializeNeighbourMatrix(int nUnitCellLengths, int (*neighbourMatrix)[8], int *atomList, int nAtoms){
 	int sc1_mat3d[nUnitCellLengths+1][nUnitCellLengths+1][nUnitCellLengths+1]; 
 	int sc2_mat3d[nUnitCellLengths+1][nUnitCellLengths+1][nUnitCellLengths+1];
 	
@@ -142,14 +142,12 @@ void initializeNeighbourMatrix(int nUnitCellLengths, int (*neighbourMatrix)[8], 
 	 * Giving vertex in the lattice a index, periodicity included 
 	 * Putting the indexes in either sc-lattice into the corresponding sc-list
 	 */
-	int i; int j; int k; int index=0; int iSc = 0;
+	int i; int j; int k; int index=0;
 	for (i=0; i<nUnitCellLengths; i++) {
 		for (j=0; j<nUnitCellLengths; j++) {
 			for (k=0; k<nUnitCellLengths; k++) {
 				sc1_mat3d[i][j][k] = index;
-				sc1[iSc] = index;
 				index++;
-				iSc++;
 			}
 		}
 	}
@@ -184,14 +182,11 @@ void initializeNeighbourMatrix(int nUnitCellLengths, int (*neighbourMatrix)[8], 
 	 * Giving vertex in the lattice a index, periodicity included 
 	 * Putting the indexes in either sc-lattice into the corresponding sc-list
 	 */
-	iSc = 0;
 	for (i=1; i<nUnitCellLengths+1; i++) {
 		for (j=1; j<nUnitCellLengths+1; j++) {
 			for (k=1; k<nUnitCellLengths+1; k++) {
 				sc2_mat3d[i][j][k] = index;
-				sc2[iSc] = index;
 				index++;
-				iSc++;
 			}
 		}
 	}
@@ -255,7 +250,13 @@ void initializeNeighbourMatrix(int nUnitCellLengths, int (*neighbourMatrix)[8], 
 			}
 		}
 	}
-	
+	for (i = 0; i<nAtoms; i++) {
+		if (i<nAtoms/2) {
+			atomList[i] = 0;
+		} else {
+			atomList[i] = 1;
+		}
+	}
 	/*for (i=0; i<nUnitCellLengths+1; i++) {
 		for (j=0; j<nUnitCellLengths+1; j++) {
 			for (k=0; k<nUnitCellLengths+1; k++) {
@@ -285,117 +286,56 @@ void initializeNeighbourMatrix(int nUnitCellLengths, int (*neighbourMatrix)[8], 
 	
 }
 
-void newConfiguration(int (*neighbourMatrix)[8], int (*newNeighbourMatrix)[8], int *sc1, int *sc2, int *newSc1, int *newSc2, int nAtoms, gsl_rng * r){
-	/*int iSc1 = floor(nAtoms/2 * gsl_rng_uniform(r)); int iSc2 = floor(nAtoms/2 * gsl_rng_uniform(r));
-	int atom1 = sc1[iSc1]; int atom2 = sc2[iSc2];
-	
-	if (atom1 < nAtoms/2) {
-		while (atom2 < nAtoms/2) {
-			iSc2 = floor(nAtoms/2 * gsl_rng_uniform(r));
-			atom2 = sc2[iSc2];
-		}
-	} else {
-		while (atom2 > nAtoms/2) {
-			iSc2 = floor(nAtoms/2 * gsl_rng_uniform(r));
-			atom2 = sc2[iSc2];
-		}
+void newConfiguration(int (*neighbourMatrix)[8], int *atomList, int *newatomList, int nAtoms, gsl_rng * r){
+	int atom1 = floor(nAtoms * gsl_rng_uniform(r)); int atom2 = floor(nAtoms * gsl_rng_uniform(r));
+	while (atom1 == atom2) {
+		atom2 = floor(nAtoms * gsl_rng_uniform(r)) ;
 	}
-	int i; int j; 
-	
-	for (i=0; i<nAtoms/2; i++){
-		newSc1[i] = sc1[i];
-		newSc2[i] = sc2[i];
-	}
-	newSc1[iSc1] = atom2; newSc2[iSc2] = atom1;*/
-	int i; int j; 
-	int atom1 = floor(nAtoms/2 * gsl_rng_uniform(r)); int atom2 = floor(nAtoms/2 * gsl_rng_uniform(r)) + nAtoms/2;
-	for (i=0; i<nAtoms/2; i++){
-		if (sc1[i] == atom1) {
-			newSc1[i] = atom2;
-		} else if (sc1[i] == atom2) {
-			newSc1[i] = atom1;
-		} else {
-			newSc1[i] = sc1[i];
-		}
-
-		if (sc2[i] == atom1) {
-			newSc2[i] = atom2;
-		} else if (sc2[i] == atom2) {
-			newSc2[i] = atom1;
-		} else {
-			newSc2[i] = sc2[i];
-		}
-	}
-	
-	for (i=0; i<nAtoms; i++){
-		if (i == atom1) {
-			for (j=0; j<8; j++) {
-				if (neighbourMatrix[atom2][j] == atom1) {
-					newNeighbourMatrix[atom1][j] = atom2;
-				} else {
-					newNeighbourMatrix[atom1][j] = neighbourMatrix[atom2][j]; 
-				}
-			}
-		} else if (i == atom2) {
-			for (j=0; j<8; j++) {
-				if (neighbourMatrix[atom1][j] == atom2) {
-					newNeighbourMatrix[atom2][j] = atom1;
-				} else {
-					newNeighbourMatrix[atom2][j] = neighbourMatrix[atom1][j]; 
-				}
-			}
-		} else {
-			for (j=0; j<8; j++) {
-				if (neighbourMatrix[i][j] == atom1) {
-					newNeighbourMatrix[i][j] = atom2;
-				} else if (neighbourMatrix[i][j] == atom2) {
-					newNeighbourMatrix[i][j] = atom1;
-				} else {
-					newNeighbourMatrix[i][j] = neighbourMatrix[i][j];
-				}
-			}
-		}
-	}
+	newatomList[atom1] = 1 - atomList[atom1];
+	newatomList[atom2] = 1 - atomList[atom2];
 }
 
-double evalEnergyForState(int (*neighbourMatrix)[8], int nAtoms, double E_AA, double E_BB, double E_AB){
+double evalEnergyForState(int (*neighbourMatrix)[8], int *atomList, int nAtoms, double E_AA, double E_BB, double E_AB){
 	double E = 0; int i; int j;
-	for(i=0; i<nAtoms/2; i++) {
-		for(j=0; j<8; j++) {
-			if(neighbourMatrix[i][j] < nAtoms/2) {
-				E += E_AA;
-			} else {
-				E += E_AB;
+	for(i=0; i<nAtoms; i++) {
+		if (atomList[i] == 0) {
+			for(j=0; j<8; j++) {
+				if(atomList[neighbourMatrix[i][j]] == 0) {
+					E += E_AA;
+				} else {
+					E += E_AB;
+				}
 			}
-		}
-	}
-	for(i=nAtoms/2; i<nAtoms; i++) {
-		for(j=0; j<8; j++) {
-			if(neighbourMatrix[i][j] < nAtoms/2) {
-				E += E_AB;
-			} else {
-				E += E_BB;
+		} else {
+			for(j=0; j<8; j++) {
+				if(atomList[neighbourMatrix[i][j]] == 0) {
+					E += E_AB;
+				} else {
+					E += E_BB;
+				}
 			}
 		}
 	}
 	return E/2.0;
 }
 
-double evalLongRangeOrder(int *sc_a, int nAtoms) {
+double evalLongRangeOrder(int (*neighbourMatrix)[8], int *atomList, int nAtoms) {
 	int N_A = 0;
 	for (int i=0; i<nAtoms/2; i++){
-		if (sc_a[i] < nAtoms/2) {
-			N_A++;
+		for (int j=0; j<8; j++) {
+			if (atomList[neighbourMatrix[i][j]] == 0) {
+				N_A++;
+			}
 		}
 	}
 	return (double) N_A / nAtoms * 4.0 - 1.0; 
 }
 
-double evalShortRangeOrder(int (*neighbourMatrix)[8], int nAtoms){
+double evalShortRangeOrder(int (*neighbourMatrix)[8], int *atomList, int nAtoms){
 	double q = 0; int i; int j; double N = (double) nAtoms/2.0;
-	for(i=0; i<nAtoms/2; i++) {
+	for(i=0; i<nAtoms; i++) {
 		for(j=0; j<8; j++) {
-			if(neighbourMatrix[i][j] >= nAtoms/2) {
+			if(atomList[i] != atomList[neighbourMatrix[i][j]]) {
 				q++;
 			}
 		}
@@ -473,21 +413,18 @@ double evalStatisticalInefficiencyBlockAtB(double f[], int N, int B) {
 }
 
 void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq, double E_AA, double E_BB, double E_AB, gsl_rng * r, double *UCPr, double *se){
-	int (*neighbourMatrix_m)[8]; int (*neighbourMatrix_t)[8];
-	int *sc1_m; int *sc2_m; int *sc1_t; int *sc2_t;
+	int (*neighbourMatrix)[8]; 
+	int *atomList_m; int *atomList_t;
 	
-	neighbourMatrix_m = malloc(nAtoms * sizeof *neighbourMatrix_m);
-	neighbourMatrix_t = malloc(nAtoms * sizeof *neighbourMatrix_t);
-	sc1_m = malloc(nAtoms * sizeof(int));
-	sc2_m = malloc(nAtoms * sizeof(int));
-	sc1_t = malloc(nAtoms * sizeof(int));
-	sc2_t = malloc(nAtoms * sizeof(int));
-	
-	initializeNeighbourMatrix(nUnitCellLengths, neighbourMatrix_m, sc1_m, sc2_m);
-	double E_m = evalEnergyForState(neighbourMatrix_m, nAtoms, E_AA, E_BB, E_AB); double E_t;
+	neighbourMatrix = malloc(nAtoms * sizeof *neighbourMatrix);
+	atomList_m = malloc(nAtoms * sizeof(int));
+	atomList_t = malloc(nAtoms * sizeof(int));
+	printf("%.0f ", T-273.15);
+	initializeNeighbourMatrix(nUnitCellLengths, neighbourMatrix, atomList_m, nAtoms);
+	printf("initialization done\n ");
+	double E_m = evalEnergyForState(neighbourMatrix, atomList_m, nAtoms, E_AA, E_BB, E_AB); double E_t;
 	
 	double beta = 1/(K_B * T);
-	printf("%f \n", T-273.15);
 	double meanE=0; double meanE2=0; double meanP=0; double meanr=0;
 	
 	double *E_m_vec; double *P_vec; double *r_vec; double *E_m_vec_meaned; double *P_vec_meaned; double *r_vec_meaned;
@@ -500,21 +437,18 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	P_vec_meaned = malloc((N_tot - N_eq) * sizeof(double));
 	r_vec_meaned = malloc((N_tot - N_eq) * sizeof(double));
 	
-	int t; int i; int j;
+	int t; int i;
 	for (t=0; t<N_tot; t++) {
-		newConfiguration(neighbourMatrix_m, neighbourMatrix_t, sc1_m, sc2_m, sc1_t, sc2_t, nAtoms, r);
+		if (t%100000 == 0) {
+			printf("%i\n", t);
+		}
+		newConfiguration(neighbourMatrix, atomList_m, atomList_t, nAtoms, r);
 		
-		E_t = evalEnergyForState(neighbourMatrix_t, nAtoms, E_AA, E_BB, E_AB); 
+		E_t = evalEnergyForState(neighbourMatrix, atomList_t, nAtoms, E_AA, E_BB, E_AB); 
 		
 		if ( gsl_rng_uniform(r) < exp(-(E_t - E_m) * beta) ) {
 			for (i=0; i<nAtoms; i++) {
-				for (j=0; j<8; j++) {
-					neighbourMatrix_m[i][j] = neighbourMatrix_t[i][j];
-				}
-			}
-			for (i=0; i<nAtoms/2; i++) {
-				sc1_m[i] = sc1_t[i];
-				sc2_m[i] = sc2_t[i];
+				atomList_m[i] = atomList_t[i]; 
 			}
 			E_m = E_t;
 		}
@@ -522,14 +456,16 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 			meanE += E_m;
 			meanE2 += E_m * E_m;
 			E_m_vec[t-N_eq] = E_m;
-			P = fabs(evalLongRangeOrder(sc1_m, nAtoms));
+			P = fabs(evalLongRangeOrder(neighbourMatrix, atomList_m, nAtoms));
 			P_vec[t-N_eq] = P;
-			rr = fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms));
+			rr = fabs(evalShortRangeOrder(neighbourMatrix, atomList_m, nAtoms));
 			r_vec[t-N_eq] = rr;
 			meanP += P;
 			meanr += rr;
 		}
 	}
+
+	printf("metropolis done\n");
 	meanE /= ((double) N_tot - N_eq);
 	meanE2 /= ((double) N_tot - N_eq); 
 	meanP  /= ((double) N_tot - N_eq);
@@ -537,8 +473,8 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	
 	UCPr[0] = meanE;
 	UCPr[1] = (meanE2 - meanE*meanE) * (beta*beta) * K_B;
-	UCPr[2] = fabs(evalLongRangeOrder(sc1_m, nAtoms));
-	UCPr[3] = fabs(evalShortRangeOrder(neighbourMatrix_m, nAtoms));
+	UCPr[2] = fabs(evalLongRangeOrder(neighbourMatrix, atomList_m, nAtoms));
+	UCPr[3] = fabs(evalShortRangeOrder(neighbourMatrix, atomList_m, nAtoms));
 	UCPr[4] = meanP;
 	UCPr[5] = meanr;
 	
@@ -561,12 +497,9 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	se[4] = s_r_corr;
 	se[5] = s_r_block;
 	
-	free(neighbourMatrix_m);
-	free(neighbourMatrix_t);
-	free(sc1_m);
-	free(sc2_m);
-	free(sc1_t);
-	free(sc2_t);
+	free(neighbourMatrix);
+	free(atomList_m);
+	free(atomList_t);
 	free(E_m_vec);
 	free(P_vec);
 	free(r_vec);
@@ -659,20 +592,20 @@ void runTask2() {
 	free(UCPr);*/
 	
 	
-	/*int (*neighbourMatrix_m)[8]; int (*neighbourMatrix_t)[8];
+	/*int (*neighbourMatrix)[8]; int (*neighbourMatrix_t)[8];
 	int *sc1_m; int *sc2_m; int *sc1_t; int *sc2_t;
 	
-	neighbourMatrix_m = malloc(nAtoms * sizeof *neighbourMatrix_m);
+	neighbourMatrix = malloc(nAtoms * sizeof *neighbourMatrix);
 	neighbourMatrix_t = malloc(nAtoms * sizeof *neighbourMatrix_t);
 	sc1_m = malloc(nAtoms * sizeof(int));
 	sc2_m = malloc(nAtoms * sizeof(int));
 	sc1_t = malloc(nAtoms * sizeof(int));
 	sc2_t = malloc(nAtoms * sizeof(int));
 	
-	initializeNeighbourMatrix(nUnitCellLengths, neighbourMatrix_m, sc1_m, sc2_m);
-	newConfiguration(neighbourMatrix_m, neighbourMatrix_t, sc1_m, sc2_m, sc1_t, sc2_t, nAtoms, r);
+	initializeNeighbourMatrix(nUnitCellLengths, neighbourMatrix, sc1_m, sc2_m);
+	newConfiguration(neighbourMatrix, neighbourMatrix_t, sc1_m, sc2_m, sc1_t, sc2_t, nAtoms, r);
 	
-	free(neighbourMatrix_m);
+	free(neighbourMatrix);
 	free(neighbourMatrix_t);
 	free(sc1_m);
 	free(sc2_m);
