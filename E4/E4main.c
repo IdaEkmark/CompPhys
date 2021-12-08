@@ -281,7 +281,7 @@ void runtask2b() {
     brownian_verlet(nt, eta_high, T, m, omega0, X2, V2, dt, rg);
 
     time = malloc((nt+1) * sizeof(double));
-	arange(time, -3e-3, nt+1, dt);
+	arange(time, -2e-3, nt+1, dt);
 
     saveDataToFile("2/position_tau147.3e-6_dt1e-6_Long.csv", X1, time, nt+1, 1);
     saveDataToFile("2/velocity_tau147.3e-6_dt1e-6_Long.csv", V1, time, nt+1, 1);
@@ -308,7 +308,7 @@ void runtask2b() {
     for (int j = 1; j <= 4; j++) {
         for (int i=0; i<ntNew; i++) {
             vDataLow25[i] = V1[j*startind + 25*i];
-            vDataLow25[i] = V1[j*startind + 25*i];
+            vDataHigh25[i] = V1[j*startind + 25*i];
         }
 
         /*
