@@ -272,32 +272,51 @@ void runtask2b() {
     saveDataToFile("2/position_tau48.5e-6_dt1e-6_Long.csv", X2, time, nt+1, 1);
     saveDataToFile("2/velocity_tau48.5e-6_dt1e-6_Long.csv", V2, time, nt+1, 1);
 
-    // Compute 4 different power spectra
-    int ntNew = 321; double dtau = 25e-6; int startind = 2000;
-    double vDataLow25[ntNew];
-    double vDataHigh25[ntNew];
-
-    for (int i=0; i<ntNew; i++) {
-        vDataLow25[i] = V1[startind + 25*i];
-        vDataLow25[i] = V1[startind + 25*i];
-    }
 
     /*
-     * Construct array with frequencies
-     */
+    * POWERSPECTRUM TIME
+    */
+    int ntNew = 81; double dtau = 25e-6; int startind = 2000;
+    double vDataLow25[ntNew]; double vDataHigh25[ntNew];
+    double fftd_dataLow25Avg[ntNew]; double fftd_dataHigh25Avg[ntNew];
+
+    /*
+    * Construct array with frequencies
+    */
     double frequencies[ntNew];
     for(int i = 0; i < ntNew; i++){
-	    frequencies[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
+        frequencies[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
     }
 
-    /*
-     * Do the fft
-     */
-    double fftd_dataLow25[ntNew]; double fftd_dataHigh25[ntNew];
-    powerspectrum(vDataLow25, fftd_dataLow25, ntNew);
-    powerspectrum_shift(fftd_dataLow25, ntNew);
-    powerspectrum(vDataHigh25, fftd_dataHigh25, ntNew);
-    powerspectrum_shift(fftd_dataHigh25, ntNew);
+    // Compute 4 different power spectra
+    for (int j = 1; j <= 4; j++) {
+        for (int i=0; i<ntNew; i++) {
+            vDataLow25[i] = V1[j*startind + 25*i];
+            vDataLow25[i] = V1[j*startind + 25*i];
+        }
+
+        /*
+        * Do the fft
+        */
+        double fftd_dataLow25[ntNew]; double fftd_dataHigh25[ntNew];
+        powerspectrum(vDataLow25, fftd_dataLow25, ntNew);
+        powerspectrum_shift(fftd_dataLow25, ntNew);
+        powerspectrum(vDataHigh25, fftd_dataHigh25, ntNew);
+        powerspectrum_shift(fftd_dataHigh25, ntNew);
+
+        for (int i=0; i<ntNew; i++) {
+            fftd_dataLow25Avg[i] += fftd_dataLow25[i];
+            fftd_dataHigh25Avg[i] += fftd_dataHigh25[i];
+        }
+    }
+
+    for (int i=0; i<ntNew; i++) {
+        fftd_dataLow25Avg[i] /= 4;
+        fftd_dataHigh25Avg[i] /= 4;
+    }
+
+    saveDataToFile("2/power_147.3e-6_dtau25dt_Long.csv", fftd_dataLow25Avg, frequencies, ntNew, 1);
+    saveDataToFile("2/power_48.5e-6_dtau25dt_Long.csv", fftd_dataHigh25Avg, frequencies, ntNew, 1);
 
     free(time);
 
@@ -308,9 +327,9 @@ void runtask2b() {
 }
 
 int main() {
-    runtask1();
-    runtask2a();
-    //runtask2b();
+    //runtask1();
+    //runtask2a();
+    runtask2b();
 
     return 0;
 }
