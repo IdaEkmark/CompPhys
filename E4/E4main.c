@@ -142,8 +142,22 @@ void evalVelocityCorrelationStandard(int n_timesteps, double *vel, double *vcf, 
 	}
 }
 
+void powerspectrumCorr(double *data, double *powspec, int nt, double dt, double *omegas, int n_omegas, double domega) /* input data, output powspec_data, number of timesteps */
+{
+	double omega = 0;
+	for(int i = 0; i < n_omegas; i++){
+		omegas[i] = omega;
+		powspec[i] = 0;
+		for(int j = 0; j < nt; j++) {
+			powspec[i] += data[j] * cos(omega * j * dt); 
+		}
+		powspec[i] *= 2*dt;
+		omega += domega;
+	}
+}
+
 void runtask1() {
-    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 515e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
+    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 105e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
     double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
     double r = 2.79e-6/2; double rho = 2.65e3; double m = (4.0/3.0 * PI * pow(r,3)) * rho; double T = 297.0; double x0 = 0; double v0 = 0; 
     double *X1; double *V1; double *X2; double *V2; double *X3; double *V3; double *X4; double *V4; double *time;
@@ -204,7 +218,7 @@ void runtask1() {
 }
 
 void runtask2a() {
-	double t_max = 110e-3; 
+	double t_max = 100e-3; 
 	
 	double dtau = 50e-6; int ntNew = t_max/dtau; 
     double time_array[ntNew];
@@ -345,7 +359,7 @@ void runtask2b() {
 }
 
 void runtask3(){
-	double dt = 1e-6; double t_max = 510e-3; int nt = (int) (t_max/dt);
+	double dt = 1e-6; double t_max = 1010e-3; int nt = (int) (t_max/dt);
     double *vDataLow;
     double *vDataHigh;
     double *time_array;
@@ -357,7 +371,7 @@ void runtask3(){
     read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow, 5000, 1);
     read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh, 5000, 1);
     
-    double *VCF_high; double *VCF_low; int vcf_intervall = 500000; double *time;
+    double *VCF_high; double *VCF_low; int vcf_intervall = 1000000; double *time;
     VCF_high = malloc((nt+1-vcf_intervall) * sizeof(double));
     VCF_low = malloc((nt+1-vcf_intervall) * sizeof(double));
     time = malloc((nt+1-vcf_intervall) * sizeof(double));
@@ -378,10 +392,45 @@ void runtask3(){
     
 }
 
+void runtask4(){
+	double dt = 1e-6; double t_max = 1010e-3; int nt = (int) (t_max/dt);
+    double *VCF_high; double *VCF_low; int vcf_intervall = 1000000; double *time;
+    VCF_high = malloc((nt+1-vcf_intervall) * sizeof(double));
+    VCF_low = malloc((nt+1-vcf_intervall) * sizeof(double));
+    time = malloc((nt+1-vcf_intervall) * sizeof(double));
+	
+    read_data("3/velcorr_147.3e-6.csv", time, VCF_low, 0, 1);
+    read_data("3/velcorr_48.5e-6.csv", time, VCF_high, 0, 1);
+    
+    double *omegas_low; double *powspec_low; double *omegas_high; double *powspec_high;  
+    double domega = 0.1; int n_omegas = (int) (10e3/domega)*2*PI;
+	omegas_low = malloc((n_omegas) * sizeof(double));
+	powspec_low = malloc((n_omegas) * sizeof(double));
+	omegas_high = malloc((n_omegas) * sizeof(double));
+	powspec_high = malloc((n_omegas) * sizeof(double));
+	
+	int ntnew = (int) (1e-3/dt); 
+	powerspectrumCorr(VCF_low, powspec_low, ntnew, dt, omegas_low, n_omegas, domega);
+	powerspectrumCorr(VCF_high, powspec_high, ntnew, dt, omegas_high, n_omegas, domega);
+	
+	saveDataToFile("4/power_147.3e-6.csv", powspec_low, omegas_low, n_omegas, 1);
+	saveDataToFile("4/power_48.5e-6.csv", powspec_high, omegas_high, n_omegas, 1);
+    
+	free(omegas_high);
+	free(omegas_low);
+	free(powspec_high);
+	free(powspec_low);
+	free(VCF_high);
+	free(VCF_low);
+	free(time);
+    
+}
+
 int main() {
-    //runtask1();
-    //runtask2a();
+    runtask1();
+    runtask2a();
     //runtask2b();
-	runtask3();
+	//runtask3();
+	//runtask4();
     return 0;
 }
