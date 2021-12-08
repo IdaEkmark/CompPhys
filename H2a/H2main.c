@@ -112,7 +112,7 @@ void runTask1() {
 	double E_CuCu = -436e-3; double E_ZnZn = -113e-3; double E_CuZn = -294e-3;
 	
 	int N = 1000; double tol = 1e-6;
-	double T = -200+273; double deltaT = 5; int nT = 201; 
+	double T = -200+273.15; double deltaT = 0.5; int nT = 2001; 
 	double *T_vec; double *P_vec; double *U_vec;
 	
 	T_vec = malloc( nT * sizeof(double));
@@ -122,6 +122,7 @@ void runTask1() {
 		T_vec[t] = T - 273.15;
 		P_vec[t] = minFreeEnergBisection(T, E_CuCu, E_ZnZn, E_CuZn, N, tol);
 		U_vec[t] = evalU(P_vec[t], E_CuCu, E_ZnZn, E_CuZn, N);
+		// printf("Critical temperature: %.2f\n", 2.0/K_B * evalDeltaE(E_CuCu, E_ZnZn, E_CuZn, N) - 273.15);
 		T += deltaT;
 	}
 	
