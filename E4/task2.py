@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 dtau_list = ['25', '50']
 tau_list  = [48.5e-6, 147.3e-6]
 color = ['k', 'r--']
-fig, ax = plt.subplots(1, 2, figsize=(12,12))
+fig, ax = plt.subplots(1, 2, figsize=(15,7))
 for dtau, c in zip(dtau_list, color):
     i=0
     for tau in tau_list:

@@ -323,6 +323,7 @@ void runtask2b() {
     free(V2);
 }
 
+<<<<<<< HEAD
 void runtask3(){
 	double dt = 1e-6; double t_max = 8e-3; int nt = (int) (t_max/dt);
     double vDataLow[nt];
@@ -352,7 +353,7 @@ void runtask3(){
 int main() {
     //runtask1();
     runtask2a();
-    //runtask2a();
+    //runtask2b();
 	//runtask3();
     return 0;
 }
