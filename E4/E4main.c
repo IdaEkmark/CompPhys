@@ -29,7 +29,7 @@ void arange(double *array, double start, int len_t, double dt){
  * @kappa - Spring constant
  */
 void brownian_verlet(int n_timesteps, double eta, double temperature, double mass, double omega0, double (*pos), double (*vel),
-		double dt)
+		double dt, gsl_rng * r)
 {
     double q;
     double v;
@@ -38,7 +38,6 @@ void brownian_verlet(int n_timesteps, double eta, double temperature, double mas
     double c0 = exp(-eta*dt);
     double v_th = sqrt(K_B * temperature / mass);
 
-    gsl_rng * r = gsl_rng_alloc(gsl_rng_mt19937);
     double gaussian_r;
     
     q = pos[0];
@@ -130,8 +129,21 @@ void read_data(char *fname, double *time_array, double *signal, int startind, in
     fclose(fp);
 }
 
+void evalVelocityCorrelationStandard(int n_timesteps, double *vel, double *vcf, int vcf_intervall) {
+	double vcf_time;
+	int time = 0;
+	while (time + vcf_intervall < n_timesteps + 1) {
+		vcf_time = 0;
+		for (int time_sum = time + 1; time_sum <= time + vcf_intervall; time_sum++ ) {
+			vcf_time += vel[time_sum] * vel[time_sum - time]/vcf_intervall;
+		}
+		vcf[time] = vcf_time;
+		time++;
+	}
+}
+
 void runtask1() {
-    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 5e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
+    double dt1 = 5e-6; double dt2 = 1e-6; double t_max = 4e-3; int nt1 = (int) (t_max/dt1); int nt2 = (int) (t_max/dt2); 
     double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
     double r = 2.79e-6/2; double rho = 2.65e3; double m = (4.0/3.0 * PI * pow(r,3)) * rho; double T = 297.0; double x0 = 0; double v0 = 0; 
     double *X1; double *V1; double *X2; double *V2; double *X3; double *V3; double *X4; double *V4; double *time;
@@ -153,15 +165,17 @@ void runtask1() {
     V3[0] = v0;
     X4[0] = x0;
     V4[0] = v0;
+    
+    gsl_rng * rg = gsl_rng_alloc(gsl_rng_mt19937);
 
-    brownian_verlet(nt1, eta_low, T, m, omega0, X1, V1, dt1);
-    brownian_verlet(nt1, eta_high, T, m, omega0, X2, V2, dt1);
+    brownian_verlet(nt1, eta_low, T, m, omega0, X1, V1, dt1, rg);
+    brownian_verlet(nt1, eta_high, T, m, omega0, X2, V2, dt1, rg);
 
-    brownian_verlet(nt2, eta_low, T, m, omega0, X3, V3, dt2);
-    brownian_verlet(nt2, eta_high, T, m, omega0, X4, V4, dt2);
+    brownian_verlet(nt2, eta_low, T, m, omega0, X3, V3, dt2, rg);
+    brownian_verlet(nt2, eta_high, T, m, omega0, X4, V4, dt2, rg);
 
     time = malloc((nt1+1) * sizeof(double));
-	arange(time, -3e-3, nt1+1, dt1);
+	arange(time, -2e-3, nt1+1, dt1);
 
     saveDataToFile("1/position_tau147.3e-6_dt5e-6.csv", X1, time, nt1+1, 1);
     saveDataToFile("1/velocity_tau147.3e-6_dt5e-6.csv", V1, time, nt1+1, 1);
@@ -170,7 +184,7 @@ void runtask1() {
 
     free(time);
     time = malloc((nt2+1) * sizeof(double));
-	arange(time, -3e-3, nt2+1, dt2);
+	arange(time, -2e-3, nt2+1, dt2);
 
     saveDataToFile("1/position_tau147.3e-6_dt1e-6.csv", X3, time, nt2+1, 1);
     saveDataToFile("1/velocity_tau147.3e-6_dt1e-6.csv", V3, time, nt2+1, 1);
@@ -189,20 +203,20 @@ void runtask1() {
     free(V4);
 }
 
-void runtask2() {
+void runtask2a() {
     int ntNew = 41; double dtau = 50e-6;
     double time_array[ntNew];
     double vDataLow50[ntNew];
     double vDataHigh50[ntNew];
-    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow50, 3000, 50);
-    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh50, 3000, 50);
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow50, 2000, 50);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh50, 2000, 50);
 
     /*
      * Construct array with frequencies
      */ 
     double frequencies[ntNew];
     for(int i = 0; i < ntNew; i++){
-	    frequencies[i] = i / (dtau * ntNew) - 1.0 / (2.0 * dtau);
+	    frequencies[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
     }
 
     /*
@@ -221,15 +235,15 @@ void runtask2() {
     double time_array2[ntNew];
     double vDataLow25[ntNew];
     double vDataHigh25[ntNew];
-    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array2, vDataLow25, 3000, 25);
-    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array2, vDataHigh25, 3000, 25);
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array2, vDataLow25, 2000, 25);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array2, vDataHigh25, 2000, 25);
 
     /*
      * Construct array with frequencies
      */ 
     double frequencies2[ntNew];
     for(int i = 0; i < ntNew; i++){
-	    frequencies2[i] = i / (dtau * ntNew) - 1.0 / (2.0 * dtau);
+	    frequencies2[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
     }
 
     /*
@@ -245,9 +259,100 @@ void runtask2() {
     saveDataToFile("2/power_48.5e-6_dtau25dt.csv", fftd_dataHigh25, frequencies2, ntNew, 1);
 }
 
+void runtask2b() {
+    double dt = 1e-6; double t_max = 10e-3; int nt = (int) (t_max/dt);
+    double tau_low = 147.3e-6; double tau_high = 48.5e-6; double eta_low = 1/tau_low; double eta_high = 1/tau_high; double omega0 = 3.1e3*2*PI;
+    double r = 2.79e-6/2; double rho = 2.65e3; double m = (4.0/3.0 * PI * pow(r,3)) * rho; double T = 297.0; double x0 = 0; double v0 = 0; 
+    double *X1; double *V1; double *X2; double *V2; double *time;
+
+    X1 = malloc(nt * sizeof(double));
+    V1 = malloc(nt * sizeof(double));
+    X2 = malloc(nt * sizeof(double));
+    V2 = malloc(nt * sizeof(double));
+
+    X1[0] = x0;
+    V1[0] = v0;
+    X2[0] = x0;
+    V2[0] = v0;
+    
+    gsl_rng * rg = gsl_rng_alloc(gsl_rng_mt19937);
+    
+    brownian_verlet(nt, eta_low, T, m, omega0, X1, V1, dt, rg);
+    brownian_verlet(nt, eta_high, T, m, omega0, X2, V2, dt, rg);
+
+    time = malloc((nt+1) * sizeof(double));
+	arange(time, -3e-3, nt+1, dt);
+
+    saveDataToFile("2/position_tau147.3e-6_dt1e-6_Long.csv", X1, time, nt+1, 1);
+    saveDataToFile("2/velocity_tau147.3e-6_dt1e-6_Long.csv", V1, time, nt+1, 1);
+    saveDataToFile("2/position_tau48.5e-6_dt1e-6_Long.csv", X2, time, nt+1, 1);
+    saveDataToFile("2/velocity_tau48.5e-6_dt1e-6_Long.csv", V2, time, nt+1, 1);
+
+    // Compute 4 different power spectra
+    int ntNew = 321; double dtau = 25e-6; int startind = 2000;
+    double vDataLow25[ntNew];
+    double vDataHigh25[ntNew];
+
+    for (int i=0; i<ntNew; i++) {
+        vDataLow25[i] = V1[startind + 25*i];
+        vDataLow25[i] = V1[startind + 25*i];
+    }
+
+    /*
+     * Construct array with frequencies
+     */
+    double frequencies[ntNew];
+    for(int i = 0; i < ntNew; i++){
+	    frequencies[i] = i / (dtau * (ntNew-1)) - 1.0 / (2.0 * dtau);
+    }
+
+    /*
+     * Do the fft
+     */
+    double fftd_dataLow25[ntNew]; double fftd_dataHigh25[ntNew];
+    powerspectrum(vDataLow25, fftd_dataLow25, ntNew);
+    powerspectrum_shift(fftd_dataLow25, ntNew);
+    powerspectrum(vDataHigh25, fftd_dataHigh25, ntNew);
+    powerspectrum_shift(fftd_dataHigh25, ntNew);
+
+    free(time);
+
+    free(X1);
+    free(V1);
+    free(X2);
+    free(V2);
+}
+
+void runtask3(){
+	double dt = 1e-6; double t_max = 8e-3; int nt = (int) (t_max/dt);
+    double vDataLow[nt];
+    double vDataHigh[nt];
+    double time_array[nt];
+    read_data("1/velocity_tau147.3e-6_dt1e-6.csv", time_array, vDataLow, 2000, 1);
+    read_data("1/velocity_tau48.5e-6_dt1e-6.csv", time_array, vDataHigh, 2000, 1);
+    
+    double *VCF_high; double *VCF_low; int vcf_intervall = 5000; double *time;
+    VCF_high = malloc((nt+1-vcf_intervall) * sizeof(double));
+    VCF_low = malloc((nt+1-vcf_intervall) * sizeof(double));
+    time = malloc((nt+1-vcf_intervall) * sizeof(double));
+	arange(time, 0.0, nt+1-vcf_intervall, dt);
+	
+    evalVelocityCorrelationStandard(nt, vDataHigh, VCF_high, vcf_intervall);
+    evalVelocityCorrelationStandard(nt, vDataLow, VCF_low, vcf_intervall);
+    
+    saveDataToFile("3/velcorr_147.3e-6.csv", VCF_low, time, nt+1-vcf_intervall, 1);
+    saveDataToFile("3/velcorr_48.5e-6.csv", VCF_high, time, nt+1-vcf_intervall, 1);
+    
+	free(VCF_high);
+	free(VCF_low);
+	free(time);
+    
+}
+
 int main() {
     //runtask1();
-    runtask2();
-
+    runtask2a();
+    //runtask2a();
+	//runtask3();
     return 0;
 }
