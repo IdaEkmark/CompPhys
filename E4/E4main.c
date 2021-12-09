@@ -431,9 +431,9 @@ void runtask4(){
 }
 
 int main() {
-    runtask1();
-    runtask2a();
-    //runtask2b();
+    //runtask1();
+    //runtask2a();
+    runtask2b();
 	//runtask3();
 	//runtask4();
     return 0;
