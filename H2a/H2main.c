@@ -119,7 +119,7 @@ void runTask1() {
 	P_vec = malloc( nT * sizeof(double));
 	U_vec = malloc( nT * sizeof(double));
 	for (int t=0; t<nT; t++){
-		T_vec[t] = T - 273.15;
+		T_vec[t] = T;
 		P_vec[t] = minFreeEnergBisection(T, E_CuCu, E_ZnZn, E_CuZn, N, tol);
 		U_vec[t] = evalU(P_vec[t], E_CuCu, E_ZnZn, E_CuZn, N);
 		// printf("Critical temperature: %.2f\n", 2.0/K_B * evalDeltaE(E_CuCu, E_ZnZn, E_CuZn, N) - 273.15);
@@ -434,7 +434,7 @@ double evalCorrelationFunction(double f[], int k, int N) {
 
 int evalStatisticalInefficiency(double f[], int N) {
 	int k = 0; double phi = 100;
-	while (phi > 0.135 || k == 1000000) {
+	while (phi > 0.135 && k < 1000000) {
 		k++; 
 		phi = evalCorrelationFunction(f, k, N);
 	}
@@ -488,7 +488,6 @@ void metropolis(double T, int nAtoms, int nUnitCellLengths, int N_tot, int N_eq,
 	double E_m = evalEnergyForState(neighbourMatrix_m, nAtoms, E_AA, E_BB, E_AB); double E_t;
 	
 	double beta = 1/(K_B * T);
-	printf("%f \n", T-273.15);
 	double meanE=0; double meanE2=0; double meanP=0; double meanr=0;
 	
 	double *E_m_vec; double *P_vec; double *r_vec; double *E_m_vec_meaned; double *P_vec_meaned; double *r_vec_meaned;
@@ -583,8 +582,8 @@ void runTask2() {
 	gsl_rng_set(r, 34);
 	
 	
-	int N = 1000000; int N_eq = 500000; int N_tot = N_eq + N;
-	double T = 800+273.15; double deltaT = 5; int nT = 201; double *UCPr; double *se;
+	int N = 2000000; int N_eq = 500000; int N_tot = N_eq + N;
+	double T = -200+273.15; double deltaT = 10; int nT = 101; double *UCPr; double *se; //double deltaT = 2; int nT = 501;
 	double *T_vec; double *U_vec; double *C_vec; double *P_vec; double *r_vec; double *P_mean_vec; double *r_mean_vec;
 	double *s_E_m_corr_vec; double *s_E_m_block_vec; double *s_P_corr_vec; double *s_P_block_vec; double *s_r_corr_vec; double *s_r_block_vec;
 	
@@ -608,7 +607,8 @@ void runTask2() {
 	
 	
 	for (t=0; t<nT; t++){
-		T_vec[t] = T - 273.15;
+		printf("T=%.0f\n", T);
+		T_vec[t] = T;
 		metropolis(T, nAtoms, nUnitCellLengths, N_tot, N_eq, E_CuCu, E_ZnZn, E_CuZn, r, UCPr, se);
 		U_vec[t] = UCPr[0];
 		C_vec[t] = UCPr[1];
@@ -623,7 +623,7 @@ void runTask2() {
 		s_P_block_vec[t] = se[3];
 		s_r_corr_vec[t] = se[4];
 		s_r_block_vec[t] = se[5];
-		T -= deltaT;
+		T += deltaT;
 	}
 	
 	saveDataToFile("2/TU.csv", U_vec, T_vec, nT, 1);
