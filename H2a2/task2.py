@@ -20,7 +20,7 @@ T = array[:, 0]
 P = array[:, 1]
 r = array2[:, 1]
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7,5))
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,5))
 ax1.plot(T, P)
 
 ax1.set_xlabel('$T$ (K)', fontsize=axisfontsize)
