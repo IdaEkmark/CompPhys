@@ -65,29 +65,53 @@ void readDataFromFile(char *fname, double *xvals, double *yvals)
     fclose(fp);
 }
 
-
+// Modulus squared of position space wave function
 double psiAbsSq(double x, double d, double x0) {
 	return 1/sqrt(PI * d*d) * exp(- (x-x0)*(x-x0)/(d*d));
+}
+
+// Modulus squared of momentum space wave function
+double phiAbsSq(double p, double d, double p0) {
+	return sqrt(d*d / (PI * HBAR*HBAR)) * exp(- d*d/(HBAR*HBAR) * (p-p0)*(p-p0));
 }
 
 
 void runTask1() {
 	double kinE = 0.1; // p0^2/2m in eV
 	double d = 0.5; // Å
-	double xMax = 5.0; int nX = 201; double dx = 2*xMax / (nX - 1.0);
-	double *xVec; double *pDens;
+
+	// Theoretical position space wavefunction (modulus squared)
+	double xRange = 10.0; int nX = 201; double dx = xRange / (nX - 1.0);
+	double *xVec; double *pDensPos;
 	xVec = malloc(nX * sizeof(double));
-	pDens = malloc(nX * sizeof(double));
+	pDensPos = malloc(nX * sizeof(double));
 
 	for (int i = 0; i < nX; i++) {
-		xVec[i] = -xMax + i * dx;
-		pDens[i] = psiAbsSq(xVec[i], d, 0);
+		xVec[i] = -xRange/2.0 + i * dx;
+		pDensPos[i] = psiAbsSq(xVec[i], d, 0);
 	}
 
-	saveDataToFile("1/pDensPos.csv", xVec, pDens, nX, 1);
+	saveDataToFile("1/pDensPos.csv", xVec, pDensPos, nX, 1);
 
 	free(xVec);
-	free(pDens);
+	free(pDensPos);
+
+
+	// Theoretical momentum space wavefunction (modulus squared)
+	double pRange = 10.0; int nP = 201; double dp = pRange / (nP - 1.0);
+	double *pVec; double *pDensMom;
+	pVec = malloc(nP * sizeof(double));
+	pDensMom = malloc(nP * sizeof(double));
+
+	for (int i = 0; i < nP; i++) {
+		pVec[i] = sqrt(2*HMASS * kinE) - pRange/2.0 + i * dp; // Assumes p0 is positive
+		pDensMom[i] = phiAbsSq(pVec[i], d, sqrt(2*HMASS * kinE));
+	}
+
+	saveDataToFile("1/pDensMomTheory.csv", pVec, pDensMom, nP, 1);
+
+	free(pVec);
+	free(pDensMom);
 }
 
 int main() {
