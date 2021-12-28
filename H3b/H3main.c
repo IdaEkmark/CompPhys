@@ -65,6 +65,7 @@ void readDataFromFile(char *fname, double *xvals, double *yvals)
     fclose(fp);
 }
 
+
 // Modulus squared of position space wave function
 double psiAbsSq(double x, double d, double x0) {
 	return 1/sqrt(PI * d*d) * exp(- (x-x0)*(x-x0)/(d*d));
@@ -73,6 +74,11 @@ double psiAbsSq(double x, double d, double x0) {
 // Modulus squared of momentum space wave function
 double phiAbsSq(double p, double d, double p0) {
 	return sqrt(d*d / (PI * HBAR*HBAR)) * exp(- d*d/(HBAR*HBAR) * (p-p0)*(p-p0));
+}
+
+
+gsl_complex psi(double x, double d, double x0, double p0) {
+	return gsl_complex_mul_real(gsl_complex_exp( gsl_complex_rect(0.0, p0/HBAR * (x-x0)) ), pow(PI * d*d,-0.25) * exp(- (x-x0)*(x-x0)/(2 * d*d)));
 }
 
 
@@ -115,8 +121,9 @@ void runTask1() {
 }
 
 int main() {
-	runTask1();
+	//runTask1();
 	//runTask2();
+	printf("This complex number is %.2f + %.2f i\n", GSL_REAL(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))), GSL_IMAG(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))));
 	
 	return 0;
 }
