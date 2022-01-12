@@ -16,6 +16,9 @@
 #define HBAR 6.582119569e-1 // eV * fs
 #define HMASS 104.453702 // Mass of hydrogen atom, eV / (Å/fs)^2
 
+#define REAL(z,i) ((z)[2*(i)]) 
+#define IMAG(z,i) ((z)[2*(i)+1])
+
 void saveDataToFile(char *fname, double *xvals, double *yvals, int n_points, int n_skip)
 {
     FILE *fp = fopen(fname, "w");
@@ -81,13 +84,35 @@ gsl_complex psi(double x, double d, double x0, double p0) {
 	return gsl_complex_mul_real(gsl_complex_exp( gsl_complex_rect(0.0, p0/HBAR * (x-x0)) ), pow(PI * d*d,-0.25) * exp(- (x-x0)*(x-x0)/(2 * d*d)));
 }
 
+void psiTest() {
+	double kinE = 0.1; // p0^2/2m in eV
+	double d = 0.5; // Å
+	double p0 = sqrt(2*HMASS * kinE);
+
+	// Calculated position space wavefunction (modulus squared)
+	double xRange = 20.0; int nX = 401; double dx = xRange / (nX - 1.0);
+	double *xVec; double *pDensPos;
+	xVec = malloc(nX * sizeof(double));
+	pDensPos = malloc(nX * sizeof(double));
+
+	for (int i = 0; i < nX; i++) {
+		xVec[i] = -xRange/2.0 + i * dx;
+		pDensPos[i] = gsl_complex_abs2(psi(xVec[i], d, 0, p0));
+	}
+
+	saveDataToFile("1/pDensPosCalc.csv", xVec, pDensPos, nX, 1);
+
+	free(xVec);
+	free(pDensPos);
+}
+
 
 void runTask1() {
 	double kinE = 0.1; // p0^2/2m in eV
 	double d = 0.5; // Å
 
 	// Theoretical position space wavefunction (modulus squared)
-	double xRange = 10.0; int nX = 201; double dx = xRange / (nX - 1.0);
+	double xRange = 20.0; int nX = 401; double dx = xRange / (nX - 1.0);
 	double *xVec; double *pDensPos;
 	xVec = malloc(nX * sizeof(double));
 	pDensPos = malloc(nX * sizeof(double));
@@ -99,31 +124,78 @@ void runTask1() {
 
 	saveDataToFile("1/pDensPos.csv", xVec, pDensPos, nX, 1);
 
-	free(xVec);
+	//free(xVec);
 	free(pDensPos);
 
 
 	// Theoretical momentum space wavefunction (modulus squared)
-	double pRange = 10.0; int nP = 201; double dp = pRange / (nP - 1.0);
+	double pRange = 20.0; int nP = 401; double dp = pRange / (nP - 1.0); double p0 = sqrt(2*HMASS * kinE);
 	double *pVec; double *pDensMom;
 	pVec = malloc(nP * sizeof(double));
 	pDensMom = malloc(nP * sizeof(double));
 
 	for (int i = 0; i < nP; i++) {
 		pVec[i] = sqrt(2*HMASS * kinE) - pRange/2.0 + i * dp; // Assumes p0 is positive
-		pDensMom[i] = phiAbsSq(pVec[i], d, sqrt(2*HMASS * kinE));
+		pDensMom[i] = phiAbsSq(pVec[i], d, p0);
 	}
 
 	saveDataToFile("1/pDensMomTheory.csv", pVec, pDensMom, nP, 1);
 
 	free(pVec);
 	free(pDensMom);
+
+
+	// Calculated momentum space wavefunction (modulus squared)
+	xRange = 40.0; nX = 401; dx = xRange / (nX - 1.0);
+	double *psiData; gsl_complex psiHere; nP = nX; dp = 2*PI*HBAR/(dx*nX); //gsl_complex psiDataS[nX];
+	psiData = malloc(2*nX * sizeof(double));
+	pDensMom = malloc(nX * sizeof(double));
+	pVec = malloc(nX * sizeof(double));
+
+	for (int i=0; i<nX; i++) {
+		xVec[i] = -xRange/2.0 + i * dx;
+		psiHere = psi(xVec[i], d, 0, p0);
+		REAL(psiData,i) = GSL_REAL(psiHere);
+		IMAG(psiData,i) = GSL_IMAG(psiHere);
+
+		pVec[i] = (i - (nX+1)/2) * dp;
+	}
+
+	/*Declare wavetable and workspace for fft*/
+	gsl_fft_complex_wavetable *comp;
+	gsl_fft_complex_workspace *work;
+	/*Allocate space for wavetable and workspace for fft*/
+	work = gsl_fft_complex_workspace_alloc(nX);
+	comp = gsl_fft_complex_wavetable_alloc(nX);
+
+	gsl_fft_complex_forward(psiData, 1, nX, comp, work);
+
+	gsl_fft_complex_wavetable_free (comp);
+  	gsl_fft_complex_workspace_free (work);
+
+	for (int i=0; i<nX; i++) {
+		if (i<(nX+1)/2) {
+			pDensMom[i+(nX+1)/2] = REAL(psiData,i) * REAL(psiData,i) + IMAG(psiData,i) * IMAG(psiData,i);
+			pDensMom[i+(nX+1)/2] *= dx*dx/(2*PI*HBAR);
+		} else {
+			pDensMom[i-(nX-1)/2] = REAL(psiData,i) * REAL(psiData,i) + IMAG(psiData,i) * IMAG(psiData,i);
+			pDensMom[i-(nX-1)/2] *= dx*dx/(2*PI*HBAR);
+		}
+	}
+
+	saveDataToFile("1/pDensMomCalc.csv", pVec, pDensMom, nP, 1);
+	
+	free(psiData);
+	free(pDensMom);
+	free(xVec);
+	free(pVec);
 }
 
 int main() {
-	//runTask1();
+	//psiTest();
+	runTask1();
 	//runTask2();
-	printf("This complex number is %.2f + %.2f i\n", GSL_REAL(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))), GSL_IMAG(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))));
+	//printf("This complex number is %.2f + %.2f i\n", GSL_REAL(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))), GSL_IMAG(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))));
 	
 	return 0;
 }
