@@ -158,7 +158,7 @@ void runTask1() {
 		REAL(psiData,i) = GSL_REAL(psiHere);
 		IMAG(psiData,i) = GSL_IMAG(psiHere);
 
-		pVec[i] = (i - (nX+1)/2) * dp;
+		pVec[i] = (i - (nX-1)/2) * dp;
 	}
 
 	/*Declare wavetable and workspace for fft*/
@@ -175,11 +175,11 @@ void runTask1() {
 
 	for (int i=0; i<nX; i++) {
 		if (i<(nX+1)/2) {
-			pDensMom[i+(nX+1)/2] = REAL(psiData,i) * REAL(psiData,i) + IMAG(psiData,i) * IMAG(psiData,i);
-			pDensMom[i+(nX+1)/2] *= dx*dx/(2*PI*HBAR);
+			pDensMom[i+(nX-1)/2] = REAL(psiData,i) * REAL(psiData,i) + IMAG(psiData,i) * IMAG(psiData,i);
+			pDensMom[i+(nX-1)/2] *= dx*dx/(2*PI*HBAR);
 		} else {
-			pDensMom[i-(nX-1)/2] = REAL(psiData,i) * REAL(psiData,i) + IMAG(psiData,i) * IMAG(psiData,i);
-			pDensMom[i-(nX-1)/2] *= dx*dx/(2*PI*HBAR);
+			pDensMom[i-(nX+1)/2] = REAL(psiData,i) * REAL(psiData,i) + IMAG(psiData,i) * IMAG(psiData,i);
+			pDensMom[i-(nX+1)/2] *= dx*dx/(2*PI*HBAR);
 		}
 	}
 
@@ -191,10 +191,101 @@ void runTask1() {
 	free(pVec);
 }
 
+void runTask2() {
+	double kinE = 0.1; // p0^2/2m in eV
+	double d = 0.5; // Å
+	double p0 = sqrt(2*HMASS*kinE);
+
+	int nX = 401; double xRange = 40.0; double dx = xRange / (nX - 1.0);
+	int nT = 2; double tMax = 40.0; double dt = tMax / (nT - 1.0); double xp; double k; //double dp = 2*PI*HBAR/(dx*nX);
+	double **psiList; double *xList; gsl_complex psiHere; //double *pList; double *tList;
+
+	xList = malloc(nX * sizeof (double));
+	psiList = malloc(nT * sizeof *psiList);
+	for (int i=0; i < nT; i++) {
+		psiList[i] = malloc(2*nX * sizeof *psiList);
+	}
+
+	// Evaluate psi for all relevant x at t=0
+	for (int j=0; j < nX; j++) {
+		xList[j] = -xRange/2.0 + j * dx;
+		psiHere = psi(xList[j], d, 0, p0);
+		REAL(psiList[0],j) = GSL_REAL(psiHere);
+		IMAG(psiList[0],j) = GSL_IMAG(psiHere);
+
+		//pList[j] = (j - (nX-1)/2) * dp;
+	}
+
+	/*Declare wavetable and workspace for fft*/
+	gsl_fft_complex_wavetable *comp;
+	gsl_fft_complex_workspace *work;
+	/*Allocate space for wavetable and workspace for fft*/
+	work = gsl_fft_complex_workspace_alloc(nX);
+	comp = gsl_fft_complex_wavetable_alloc(nX);
+
+	double *psiData; double newR; double newI;
+	psiData = malloc(2*nX * sizeof(double));
+
+	// Initialise psiData as Psi(x,t=0)
+	for (int j=0; j < nX; j++) {
+		REAL(psiData,j) = REAL(psiList[0],j);
+		IMAG(psiData,j) = IMAG(psiList[0],j);
+	}
+
+	// Perform time evolution using FFTs
+	for (int i=1; i < nT; i++) {
+		// Potential is zero everywhere, and can be ignored
+		// (Otherwise we would multiply by exp(-i V_j stuff) here)
+
+		// Perform FFT into momentum space
+		gsl_fft_complex_forward(psiData, 1, nX, comp, work);
+
+		// Multiply each entry by exp(-iE(p)dt) to get evolution +dt
+		for (int l=0; l < nX; l++) {
+			k = (l-(nX-1)/2.0) * 2*PI/(nX*dx); // (l - (nX-1)/2) * dk
+			xp = HBAR * k*k/(2.0*HMASS) * dt;
+			newR = REAL(psiData,l)*cos(xp) - IMAG(psiData,l)*sin(xp);
+			newI = IMAG(psiData,l)*cos(xp) + REAL(psiData,l)*sin(xp);
+			REAL(psiData,l) = newR;
+			IMAG(psiData,l) = newI;
+		}
+
+		// Perform IFFT back to position space
+		gsl_fft_complex_inverse(psiData, 1, nX, comp, work);
+
+		// Set current row of psiList to psiData
+		for (int j=0; j < nX; j++) {
+			REAL(psiList[i],j) = REAL(psiData,j);
+			IMAG(psiList[i],j) = IMAG(psiData,j);
+		}
+	}
+
+	double *pDensPos;
+	pDensPos = malloc(nX * sizeof(double));
+	for (int j=0; j < nX; j++) {
+		pDensPos[j] = REAL(psiList[nT-1],j)*REAL(psiList[nT-1],j) + IMAG(psiList[nT-1],j)*IMAG(psiList[nT-1],j);
+	}
+
+
+	saveDataToFile("2/pDensPos40fs.csv", xList, pDensPos, nX, 1);
+
+	free(pDensPos);
+
+	gsl_fft_complex_wavetable_free (comp);
+	gsl_fft_complex_workspace_free (work);
+	free(psiData);
+
+	for (int i=0; i < nT; i++) {
+		free(psiList[i]);
+	}
+	free(psiList);
+	free(xList);
+}
+
 int main() {
 	//psiTest();
-	runTask1();
-	//runTask2();
+	//runTask1();
+	runTask2();
 	//printf("This complex number is %.2f + %.2f i\n", GSL_REAL(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))), GSL_IMAG(psi(1.0, 0.5, 0.0, sqrt(2*HMASS * 0.1))));
 	
 	return 0;
